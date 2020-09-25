@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QPushButton, QWidget, QTabWidget, QVBoxLayout, QGridLayout, QGroupBox, QLineEdit, QLabel, QComboBox, QCheckBox, QFileDialog
+from PyQt5.QtWidgets import QPushButton, QWidget, QTabWidget, QVBoxLayout, QGridLayout, QGroupBox, QLineEdit, QLabel, QComboBox, QCheckBox, QFileDialog, QMessageBox
 from PyQt5.QtCore import pyqtSlot, Qt
 from PyQt5.QtGui import QFont
 
@@ -6,8 +6,11 @@ from detectors.xpadProcess import XpadVisualisation
 
 from constants import scan_types
 
+from utils import flatfield
+
 import os
 import pyqtgraph
+import sys
 
 class XpadContext(QWidget):
 
@@ -84,10 +87,14 @@ class DataContext(QWidget):
         x_input = QLineEdit()
         y_label = QLabel("y in pixels : ")
         y_input = QLineEdit()
-        gamma_label = QLabel("gamma in degree : ")
-        gamma_input = QLineEdit()
+        y_input.setMaxLength(50)
+        gamma_label1 = QLabel("gamma in degree : ")
+        gamma_input1 = QLineEdit()
+        gamma_label2 = QLabel("gamma in degree : ")
+        gamma_input2 = QLineEdit()
         distance_label = QLabel("distance in pixel/degree : ")
-        distance_input = QLineEdit()
+        distance_output = QLineEdit()
+        distance_output.setReadOnly(True)
 
         scan_title = QLabel("Scan n° : ")
         scan_title.setFont(font)
@@ -97,16 +104,18 @@ class DataContext(QWidget):
         scan_button.clicked.connect(self.browseFile)
 
         upperLeftCornerLayout.addWidget(scan_type_label, 0, 0, 1, 2)
-        upperLeftCornerLayout.addWidget(scan_type_input, 1, 0)
+        upperLeftCornerLayout.addWidget(scan_type_input, 1, 0, 1, 2)
         upperLeftCornerLayout.addWidget(direct_beam_label, 2, 0, 1, 2)
         upperLeftCornerLayout.addWidget(x_label, 3, 0)
         upperLeftCornerLayout.addWidget(x_input, 3, 1)
         upperLeftCornerLayout.addWidget(y_label, 3, 2)
         upperLeftCornerLayout.addWidget(y_input, 3, 3)
-        upperLeftCornerLayout.addWidget(gamma_label, 4, 0)
-        upperLeftCornerLayout.addWidget(gamma_input, 4, 1)
+        upperLeftCornerLayout.addWidget(gamma_label1, 4, 0)
+        upperLeftCornerLayout.addWidget(gamma_input1, 4, 1)
+        upperLeftCornerLayout.addWidget(gamma_label2, 4, 2)
+        upperLeftCornerLayout.addWidget(gamma_input2, 4, 3)
         upperLeftCornerLayout.addWidget(distance_label, 5, 0)
-        upperLeftCornerLayout.addWidget(distance_input, 5, 1)
+        upperLeftCornerLayout.addWidget(distance_output, 5, 1)
         upperLeftCornerLayout.addWidget(scan_title, 6, 0, 1, 2)
         upperLeftCornerLayout.addWidget(scan_label, 7, 0, 1, 2)
         upperLeftCornerLayout.addWidget(scan_button, 7, 2, 1, 2)
@@ -128,12 +137,16 @@ class DataContext(QWidget):
         flat_scan_label2 = QLabel("Final flat scan :")
         flat_scan_input2 = QLineEdit()
 
+        flat_scan_run = QPushButton("Run the flatfield computing")
+        flat_scan_run.clicked.connect(self.generateFlatfield)
+
         graphWidget = pyqtgraph.PlotWidget()
         graphWidget.setBackground('w')
+        graphWidget.setTitle("Flatfield")
         #graphWidget.plot([0,0], [0,2])
 
         flatfield_label = QLabel("Flatfield name : ")
-        flatfield_output = QLineEdit()
+        flatfield_output = QLabel()
 
         save_box = QCheckBox("Save flatfield")
         save_box.setChecked(True)
@@ -142,7 +155,8 @@ class DataContext(QWidget):
         upperRightCornerLayout.addWidget(flat_scan_input1, 0, 1)
         upperRightCornerLayout.addWidget(flat_scan_label2, 1, 0)
         upperRightCornerLayout.addWidget(flat_scan_input2, 1, 1)
-        upperRightCornerLayout.addWidget(graphWidget, 2, 0, 1, 2)
+        upperRightCornerLayout.addWidget(flat_scan_run, 1, 3)
+        upperRightCornerLayout.addWidget(graphWidget, 2, 0, 1, 4)
         upperRightCornerLayout.addWidget(flatfield_label, 3, 0)
         upperRightCornerLayout.addWidget(flatfield_output, 3, 1)
         upperRightCornerLayout.addWidget(save_box, 4, 0)
@@ -159,3 +173,14 @@ visualize.', directory, '*.nxs')
         """return the path of the current directory,
         aka where the script is running."""
         return os.path.dirname(os.path.realpath(__file__))
+
+    def generateFlatfield(self) -> None:
+        if self.upperRightCorner.layout().itemAt(1).widget().text() == "" or self.upperRightCorner.layout().itemAt(3).widget().text() == "":
+            QMessageBox(QMessageBox.Icon.Critical,"Can't run a flat computation", "You must select at least two scans to perfom a flatfield").exec()
+        else:
+            path = self.getCurrentDirectory().split('/')[:-1]
+            path = '/'.join(path)
+            print(path)
+            first_scan = int(self.upperRightCorner.layout().itemAt(1).widget().text())
+            last_scan = int(self.upperRightCorner.layout().itemAt(3).widget().text())
+            print(flatfield.genFlatfield(first_scan, last_scan, path))
