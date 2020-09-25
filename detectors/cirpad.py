@@ -18,14 +18,12 @@ class CirpadContext(QWidget):
         self.tabs.addTab(self.tab2,"Visualisation and processing")
 
         # Create first tab
-        self.tab1.layout = QVBoxLayout(self)
+        self.tab1.layout = QVBoxLayout(self.tab1)
         self.pushButton1 = QPushButton("Hello from Cirpad")
         self.tab1.layout.addWidget(self.pushButton1)
-        self.tab1.setLayout(self.tab1.layout)
 
         # Add tabs to widget
         self.layout.addWidget(self.tabs)
-        self.setLayout(self.layout)
 
     @pyqtSlot()
     def on_click(self):
