@@ -1,12 +1,15 @@
-from PyQt5.QtWidgets import QPushButton, QWidget, QTabWidget, QVBoxLayout, QGridLayout, QGroupBox, QLineEdit, QLabel, QComboBox, QCheckBox, QFileDialog, QMessageBox
+from PyQt5.QtWidgets import QPushButton, QWidget, QTabWidget, QVBoxLayout, QGridLayout, QGroupBox, QLineEdit, QLabel, QComboBox, QCheckBox, QFileDialog, QMessageBox, QDesktopWidget, QApplication
 from PyQt5.QtCore import pyqtSlot, Qt
-from PyQt5.QtGui import QFont
-
-from detectors.xpadProcess import XpadVisualisation
+from PyQt5.QtGui import QFont, QCursor
 
 from constants import scan_types
 
+from detectors.xpadProcess import XpadVisualisation
+
 from utils import flatfield
+
+from silx.gui.colors import Colormap
+from silx.gui.plot import Plot2D
 
 import os
 import pyqtgraph
@@ -53,121 +56,123 @@ class DataContext(QWidget):
         super(QWidget, self).__init__()
         self.layout = QGridLayout(self)
 
-        self.upperLeftCorner = self.generateContextualDataGroup()
+        self.upperLeftCorner = None
+        self.generateContextualDataGroup()
         self.layout.addWidget(self.upperLeftCorner, 0, 0)
 
-        self.upperRightCorner = self.generateFlatfieldGroup()
+        self.upperRightCorner = None
+        self.generateFlatfieldGroup()
         self.layout.addWidget(self.upperRightCorner, 0, 1, 2, 1)
 
         self.lowerLeftCorner = QGroupBox("Calibration with powder")
         self.layout.addWidget(self.lowerLeftCorner, 1, 0)
 
-
     def generateContextualDataGroup(self):
-        upperLeftCorner = QGroupBox("Experimental data")
+        self.upperLeftCorner = QGroupBox("Experimental data")
 
-        upperLeftCornerLayout = QGridLayout(upperLeftCorner)
+        self.upperLeftCornerLayout = QGridLayout(self.upperLeftCorner)
 
         font = QFont()
         font.setPointSize(14)
         font.setUnderline(True)
 
-        scan_type_label = QLabel("Scan type : ")
-        scan_type_label.setFont(font)
-        scan_type_input = QComboBox()
+        self.scan_type_label = QLabel("Scan type : ")
+        self.scan_type_label.setFont(font)
+        self.scan_type_input = QComboBox()
         for scan in scan_types:
-            scan_type_input.addItem(scan.value)
+            self.scan_type_input.addItem(scan.value)
 
 
-        direct_beam_label = QLabel("Direct Beam :")
-        direct_beam_label.setFont(font)
+        self.direct_beam_label = QLabel("Direct Beam :")
+        self.direct_beam_label.setFont(font)
         # direct_beam_label.setAlignment(Qt.AlignCenter)
 
-        x_label = QLabel("x in pixels : ")
-        x_input = QLineEdit()
-        y_label = QLabel("y in pixels : ")
-        y_input = QLineEdit()
-        y_input.setMaxLength(50)
-        gamma_label1 = QLabel("gamma in degree : ")
-        gamma_input1 = QLineEdit()
-        gamma_label2 = QLabel("gamma in degree : ")
-        gamma_input2 = QLineEdit()
-        distance_label = QLabel("distance in pixel/degree : ")
-        distance_output = QLineEdit()
-        distance_output.setReadOnly(True)
+        self.x_label = QLabel("x in pixels : ")
+        self.x_input = QLineEdit()
+        self.y_label = QLabel("y in pixels : ")
+        self.y_input = QLineEdit()
+        self.y_input.setMaxLength(50)
+        self.gamma_label1 = QLabel("gamma in degree : ")
+        self.gamma_input1 = QLineEdit()
+        self.gamma_label2 = QLabel("gamma in degree : ")
+        self.gamma_input2 = QLineEdit()
+        self.distance_label = QLabel("distance in pixel/degree : ")
+        self.distance_output = QLineEdit()
+        self.distance_output.setReadOnly(True)
 
-        scan_title = QLabel("Scan n° : ")
-        scan_title.setFont(font)
-        scan_label = QLabel("Click on the button to search for the scan you want")
-        scan_button = QPushButton("Search scan")
+        self.scan_title = QLabel("Scan n° : ")
+        self.scan_title.setFont(font)
+        self.scan_label = QLabel("Click on the button to search for the scan you want")
+        self.scan_button = QPushButton("Search scan")
 
-        scan_button.clicked.connect(self.browseFile)
+        self.scan_button.clicked.connect(self.browseFile)
 
-        upperLeftCornerLayout.addWidget(scan_type_label, 0, 0, 1, 2)
-        upperLeftCornerLayout.addWidget(scan_type_input, 1, 0, 1, 2)
-        upperLeftCornerLayout.addWidget(direct_beam_label, 2, 0, 1, 2)
-        upperLeftCornerLayout.addWidget(x_label, 3, 0)
-        upperLeftCornerLayout.addWidget(x_input, 3, 1)
-        upperLeftCornerLayout.addWidget(y_label, 3, 2)
-        upperLeftCornerLayout.addWidget(y_input, 3, 3)
-        upperLeftCornerLayout.addWidget(gamma_label1, 4, 0)
-        upperLeftCornerLayout.addWidget(gamma_input1, 4, 1)
-        upperLeftCornerLayout.addWidget(gamma_label2, 4, 2)
-        upperLeftCornerLayout.addWidget(gamma_input2, 4, 3)
-        upperLeftCornerLayout.addWidget(distance_label, 5, 0)
-        upperLeftCornerLayout.addWidget(distance_output, 5, 1)
-        upperLeftCornerLayout.addWidget(scan_title, 6, 0, 1, 2)
-        upperLeftCornerLayout.addWidget(scan_label, 7, 0, 1, 2)
-        upperLeftCornerLayout.addWidget(scan_button, 7, 2, 1, 2)
-
-        return upperLeftCorner
+        self.upperLeftCornerLayout.addWidget(self.scan_type_label, 0, 0, 1, 2)
+        self.upperLeftCornerLayout.addWidget(self.scan_type_input, 1, 0, 1, 2)
+        self.upperLeftCornerLayout.addWidget(self.direct_beam_label, 2, 0, 1, 2)
+        self.upperLeftCornerLayout.addWidget(self.x_label, 3, 0)
+        self.upperLeftCornerLayout.addWidget(self.x_input, 3, 1)
+        self.upperLeftCornerLayout.addWidget(self.y_label, 3, 2)
+        self.upperLeftCornerLayout.addWidget(self.y_input, 3, 3)
+        self.upperLeftCornerLayout.addWidget(self.gamma_label1, 4, 0)
+        self.upperLeftCornerLayout.addWidget(self.gamma_input1, 4, 1)
+        self.upperLeftCornerLayout.addWidget(self.gamma_label2, 4, 2)
+        self.upperLeftCornerLayout.addWidget(self.gamma_input2, 4, 3)
+        self.upperLeftCornerLayout.addWidget(self.distance_label, 5, 0)
+        self.upperLeftCornerLayout.addWidget(self.distance_output, 5, 1)
+        self.upperLeftCornerLayout.addWidget(self.scan_title, 6, 0, 1, 2)
+        self.upperLeftCornerLayout.addWidget(self.scan_label, 7, 0, 1, 2)
+        self.upperLeftCornerLayout.addWidget(self.scan_button, 7, 2, 1, 2)
 
     def generateFlatfieldGroup(self):
-        upperRightCorner = QGroupBox("Flatfield")
+        self.upperRightCorner = QGroupBox("Flatfield")
 
-        upperRightCornerLayout = QGridLayout(upperRightCorner)
+        self.upperRightCornerLayout = QGridLayout(self.upperRightCorner)
 
-        font = QFont()
-        font.setPointSize(14)
-        font.setUnderline(True)
+        self.flat_scan_label1 = QLabel("Initial flat scan : ")
+        self.flat_scan_input1 = QLineEdit()
+        self.flat_scan_button1 = QPushButton("Browse file for first scan")
+        self.flat_scan_button1.clicked.connect(self.browseFile)
 
-        flat_scan_label1 = QLabel("Initial flat scan : ")
-        flat_scan_input1 = QLineEdit()
+        self.flat_scan_label2 = QLabel("Final flat scan number :")
+        self.flat_scan_input2 = QLineEdit()
 
-        flat_scan_label2 = QLabel("Final flat scan :")
-        flat_scan_input2 = QLineEdit()
+        self.flat_scan_run = QPushButton("Run the flatfield computing")
+        self.flat_scan_run.clicked.connect(self.generateFlatfield)
 
-        flat_scan_run = QPushButton("Run the flatfield computing")
-        flat_scan_run.clicked.connect(self.generateFlatfield)
+        self.data_viewer = Plot2D(self)
 
-        graphWidget = pyqtgraph.PlotWidget()
-        graphWidget.setBackground('w')
-        graphWidget.setTitle("Flatfield")
-        #graphWidget.plot([0,0], [0,2])
+        self.flatfield_label = QLabel("Flatfield name : ")
+        self.flatfield_output = QLabel()
 
-        flatfield_label = QLabel("Flatfield name : ")
-        flatfield_output = QLabel()
+        self.flat_save_box = QCheckBox("Save flatfield")
+        self.flat_save_box.setChecked(False)
+        self.flat_save_box.stateChanged.connect(self.saveFlatfield)
 
-        save_box = QCheckBox("Save flatfield")
-        save_box.setChecked(True)
-
-        upperRightCornerLayout.addWidget(flat_scan_label1, 0, 0)
-        upperRightCornerLayout.addWidget(flat_scan_input1, 0, 1)
-        upperRightCornerLayout.addWidget(flat_scan_label2, 1, 0)
-        upperRightCornerLayout.addWidget(flat_scan_input2, 1, 1)
-        upperRightCornerLayout.addWidget(flat_scan_run, 1, 3)
-        upperRightCornerLayout.addWidget(graphWidget, 2, 0, 1, 4)
-        upperRightCornerLayout.addWidget(flatfield_label, 3, 0)
-        upperRightCornerLayout.addWidget(flatfield_output, 3, 1)
-        upperRightCornerLayout.addWidget(save_box, 4, 0)
-
-        return upperRightCorner
+        self.upperRightCornerLayout.addWidget(self.flat_scan_label1, 0, 0)
+        self.upperRightCornerLayout.addWidget(self.flat_scan_input1, 0, 1)
+        self.upperRightCornerLayout.addWidget(self.flat_scan_button1, 0, 3)
+        self.upperRightCornerLayout.addWidget(self.flat_scan_label2, 1, 0)
+        self.upperRightCornerLayout.addWidget(self.flat_scan_input2, 1, 1)
+        self.upperRightCornerLayout.addWidget(self.flat_save_box, 2, 0)
+        self.upperRightCornerLayout.addWidget(self.flat_scan_run, 2, 1)
+        self.upperRightCornerLayout.addWidget(self.flatfield_label, 3, 0)
+        self.upperRightCornerLayout.addWidget(self.flatfield_output, 3, 1)
+        self.upperRightCornerLayout.addWidget(self.data_viewer, 4, 0, 1, 4)
 
     def browseFile(self) -> None:
+        cursor_position = QCursor.pos()
         directory = self.getCurrentDirectory()
-        self.scan, _ = QFileDialog.getOpenFileName(self, 'Choose the scan file you want to \
+        # Helps multiple uses of this function without rewriting it. If the cursor is in the left half-screen part, user wants to chose an experiment file
+        if cursor_position.x() <= QApplication.desktop().screenGeometry().width()//2:
+            self.scan, _ = QFileDialog.getOpenFileName(self, 'Choose the scan file you want to \
 visualize.', directory, '*.nxs')
-        self.upperLeftCorner.layout().itemAt(12).widget().setText(self.scan.split('/')[-1])
+            self.scan_label.setText(self.scan.split('/')[-1])
+        # Else it means user wants to chose a flatscan that will help reduce the noise in the experiment file
+        else:
+            self.flat_scan, _ = QFileDialog.getOpenFileName(self, 'Choose the flatscan file you want to \
+compute.', directory, '*.nxs *.hdf5')
+            self.flat_scan_input1.setText(self.flat_scan.split('/')[-1])
 
     def getCurrentDirectory(self) -> str:
         """return the path of the current directory,
@@ -175,12 +180,21 @@ visualize.', directory, '*.nxs')
         return os.path.dirname(os.path.realpath(__file__))
 
     def generateFlatfield(self) -> None:
-        if self.upperRightCorner.layout().itemAt(1).widget().text() == "" or self.upperRightCorner.layout().itemAt(3).widget().text() == "":
+        if self.flat_scan_input1.text() == "" or self.flat_scan_input2.text() == "":
             QMessageBox(QMessageBox.Icon.Critical,"Can't run a flat computation", "You must select at least two scans to perfom a flatfield").exec()
         else:
-            path = self.getCurrentDirectory().split('/')[:-1]
-            path = '/'.join(path)
-            print(path)
-            first_scan = int(self.upperRightCorner.layout().itemAt(1).widget().text())
-            last_scan = int(self.upperRightCorner.layout().itemAt(3).widget().text())
-            print(flatfield.genFlatfield(first_scan, last_scan, path))
+            if self.flat_scan_input1.text().split('_')[-1].split('.')[-2] == "0001":
+                first_scan = int(self.flat_scan_input1.text().split('_')[-2])
+            else:
+                first_scan = int(self.flat_scan_input1.text().split('_')[-1].split('.')[-2])
+            last_scan = int(self.flat_scan_input2.text())
+            if first_scan > last_scan:
+                first_scan, last_scan = last_scan, first_scan
+            self.result = flatfield.genFlatfield(first_scan, last_scan, self.flat_scan)
+            self.colormap = Colormap("viridis", normalization='log')
+            self.flatfield_output.setText(f"flatfield_{first_scan}_{last_scan}.nxs")
+            self.data_viewer.addImage(self.result, colormap=self.colormap, xlabel='X in pixels', ylabel='Y in pixels')
+
+    def saveFlatfield(self) -> None:
+        if hasattr(self, 'result') and self.flat_save_box.isChecked():
+            numpy.save(self.getCurrentDirectory(), self.result, False)
