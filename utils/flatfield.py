@@ -1,6 +1,7 @@
 from typing import NamedTuple, Optional, Text, Union
 from functools import partial
 from h5py import Dataset, File
+from PyQt5.QtWidgets import QMessageBox
 
 import numpy
 import os
@@ -38,15 +39,21 @@ def _v_item(key: Text, name: Text, obj: Dataset) -> Dataset:
         return obj
 
 def genFlatfield(first_scan: int, last_scan: int, path: str):
-    flatfield = numpy.zeros((1, 240, 560), dtype=numpy.int32)
-    if path.split('/')[-1].split('_')[-1].split('.')[-2] == "0001":
+    flatfield = numpy.zeros((240, 560), dtype=numpy.int64)
+    if os.path.basename(path).split('_')[-1].split('.')[-2] == "0001":
         extension = "_0001.nxs"
     else:
         extension = ".nxs"
-    for i in range(last_scan - first_scan + 1):
-        filename = path + f"scan_{i + first_scan}" + extension
-        with File(filename, mode='r') as h5file:
-            for data in get_dataset(h5file, DatasetPathWithAttribute("interpretation",b"image")):
-                flatfield += data
-    return data
-    
+    scan_name = os.path.basename(path).replace(extension, '').replace(str(first_scan), '').replace(str(last_scan), '')
+    directory_path = os.path.dirname(path)
+    try:
+        for i in range(last_scan - first_scan + 1):
+            filename = scan_name +  f"{i + first_scan}" + extension
+            with File(os.path.join(directory_path, filename), mode='r') as h5file:
+                for data in get_dataset(h5file, DatasetPathWithAttribute("interpretation",b"image")):
+                    flatfield += data
+        return flatfield
+    except ValueError:
+        QMessageBox(QMessageBox.Icon.Critical, "Failed", "You are running a flatfield on a different detector shape").exec()
+    except OSError:
+        QMessageBox(QMessageBox.Icon.Critical, "Failed", f"You selected {filename} file wich does not exist in the location").exec()
