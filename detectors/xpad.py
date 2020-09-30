@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QPushButton, QWidget, QTabWidget, QVBoxLayout, QGridLayout, QGroupBox, QLineEdit, QLabel, QComboBox, QCheckBox, QFileDialog, QMessageBox, QDesktopWidget, QApplication
+from PyQt5.QtWidgets import QPushButton, QWidget, QTabWidget, QVBoxLayout, QGridLayout, QGroupBox, QLineEdit, QLabel, QComboBox, QCheckBox, QFileDialog, QMessageBox, QDesktopWidget, QApplication, QProgressBar
 from PyQt5.QtCore import pyqtSlot, Qt
 from PyQt5.QtGui import QFont, QCursor
 
@@ -33,8 +33,8 @@ class XpadContext(QWidget):
 
         # Create first tab
         self.tab1.layout = QVBoxLayout(self.tab1)
-        self.form = DataContext()
-        self.tab1.layout.addWidget(self.form)
+        self.data_context = DataContext()
+        self.tab1.layout.addWidget(self.data_context)
 
         # Create second tab
         self.tab2.layout = QVBoxLayout(self.tab2)
@@ -55,6 +55,8 @@ class DataContext(QWidget):
     def __init__(self):
         super(QWidget, self).__init__()
         self.layout = QGridLayout(self)
+
+        self.colormap = Colormap("viridis", normalization='log')
 
         self.upperLeftCorner = None
         self.generateContextualDataGroup()
@@ -140,6 +142,8 @@ class DataContext(QWidget):
         self.flat_scan_run = QPushButton("Run the flatfield computing")
         self.flat_scan_run.clicked.connect(self.generateFlatfield)
 
+        self.flat_scan_progress = QProgressBar(self)
+
         self.data_viewer = Plot2D(self)
 
         self.flatfield_label = QLabel("Flatfield name : ")
@@ -151,11 +155,12 @@ class DataContext(QWidget):
 
         self.upperRightCornerLayout.addWidget(self.flat_scan_label1, 0, 0)
         self.upperRightCornerLayout.addWidget(self.flat_scan_input1, 0, 1)
-        self.upperRightCornerLayout.addWidget(self.flat_scan_button1, 0, 3)
+        self.upperRightCornerLayout.addWidget(self.flat_scan_button1, 0, 2)
         self.upperRightCornerLayout.addWidget(self.flat_scan_label2, 1, 0)
         self.upperRightCornerLayout.addWidget(self.flat_scan_input2, 1, 1)
         self.upperRightCornerLayout.addWidget(self.flat_save_box, 2, 0)
         self.upperRightCornerLayout.addWidget(self.flat_scan_run, 2, 1)
+        self.upperRightCornerLayout.addWidget(self.flat_scan_progress, 2, 2)
         self.upperRightCornerLayout.addWidget(self.flatfield_label, 3, 0)
         self.upperRightCornerLayout.addWidget(self.flatfield_output, 3, 1)
         self.upperRightCornerLayout.addWidget(self.data_viewer, 4, 0, 1, 4)
@@ -190,8 +195,7 @@ compute.', directory, '*.nxs *.hdf5')
             last_scan = int(self.flat_scan_input2.text())
             if first_scan > last_scan:
                 first_scan, last_scan = last_scan, first_scan
-            self.result = flatfield.genFlatfield(first_scan, last_scan, self.flat_scan)
-            self.colormap = Colormap("viridis", normalization='log')
+            self.result = flatfield.genFlatfield(first_scan, last_scan, self.flat_scan, self.flat_scan_progress)
             self.flatfield_output.setText(f"flatfield_{first_scan}_{last_scan}.nxs")
             self.data_viewer.addImage(self.result, colormap=self.colormap, xlabel='X in pixels', ylabel='Y in pixels')
 
