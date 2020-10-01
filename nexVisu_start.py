@@ -18,11 +18,11 @@ class Window(QMainWindow):
         self.width = self.screenSize.width()
         self.height = self.screenSize.height()
 
-        self.initUI()
+        self.init_ui()
         
         self.show()
 
-    def initUI(self):
+    def init_ui(self):
         # Set the title and the geometry for the window
         self.setWindowTitle(self.title)
         self.setGeometry((self.width - self.screenSize.width())//2,
@@ -42,8 +42,8 @@ class Window(QMainWindow):
         # Populate the selection button with the detectors' name
         for detector in detectors:
             self.selectionButton.addItem(detector.value)
-        self.selectionButton.currentTextChanged.connect(self.changeTab)
-        self.table_widget = self.initDetectorUI()
+        self.selectionButton.currentTextChanged.connect(self.change_tab)
+        self.table_widget = self.init_detector_ui()
 
         layout.addWidget(self.selectionButton)
         layout.addWidget(self.table_widget)
@@ -51,18 +51,18 @@ class Window(QMainWindow):
         # Set the global widget in the window
         self.setCentralWidget(widget)
 
-    def initDetectorUI(self) -> QTabWidget or None:
+    def init_detector_ui(self) -> QTabWidget or None:
         if self.selectionButton.currentText() == detectors.XPAD.value:
             return xpad.XpadContext(self.application)
         if self.selectionButton.currentText() == detectors.CIRPAD.value:
             return cirpad.CirpadContext()
 
-    def changeTab(self) -> None:
-        self.clearTab(self.centralWidget().layout())
+    def change_tab(self) -> None:
+        self.clear_tab(self.centralWidget().layout())
         self.table_widget = self.initDetectorUI()
         self.centralWidget().layout().addWidget(self.table_widget)
         
-    def clearTab(self, layout: QLayout) -> None:
+    def clear_tab(self, layout: QLayout) -> None:
         """Delete all the objects, i.e the widgets that are non essential to the gui when
         changing the mode in order to make the change faster"""
 
