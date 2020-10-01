@@ -8,14 +8,15 @@ from detectors import xpad, cirpad
 
 class Window(QMainWindow):
 
-    def __init__(self, width, height):
+    def __init__(self, application):
         super().__init__()
+        self.application = application
+        self.screenSize = application.desktop().screenGeometry()
         self.title = 'Nexus visualisation'
         self.left = 0
         self.top = 0
-        self.width = width
-        self.height = height
-        self.screenSize = QRect(0, 0, width, height)
+        self.width = self.screenSize.width()
+        self.height = self.screenSize.height()
 
         self.initUI()
         
@@ -52,7 +53,7 @@ class Window(QMainWindow):
 
     def initDetectorUI(self) -> QTabWidget or None:
         if self.selectionButton.currentText() == detectors.XPAD.value:
-            return xpad.XpadContext()
+            return xpad.XpadContext(self.application)
         if self.selectionButton.currentText() == detectors.CIRPAD.value:
             return cirpad.CirpadContext()
 
@@ -74,12 +75,7 @@ class Window(QMainWindow):
         #     # Prevent the function from removing the layout that is in every mode
         #     if child.layout() not in self.unvariant_layouts:
         #         self.clearLayout(child.layout())
-            
-def getScreenResolution(application)-> list:
-    """Returns the resolution of the screen."""
 
-    res = application.desktop().screenGeometry()
-    return res
 
 def applicationInstance():
     res = QApplication.instance()
@@ -89,6 +85,5 @@ def applicationInstance():
 
 if __name__ == '__main__':
     app = applicationInstance()
-    screen = getScreenResolution(app)
-    Window = Window(screen.width(), screen.height())
+    Window = Window(app)
     sys.exit(app.exec_())

@@ -1,7 +1,7 @@
 from typing import NamedTuple, Optional, Text, Union
 from functools import partial
 from h5py import Dataset, File
-from PyQt5.QtWidgets import QMessageBox, QProgressBar
+from PyQt5.QtWidgets import QMessageBox, QProgressBar, QApplication, QWidget
 
 import numpy
 import os
@@ -38,7 +38,7 @@ def _v_item(key: Text, name: Text, obj: Dataset) -> Dataset:
     if key in name:
         return obj
 
-def genFlatfield(first_scan: int, last_scan: int, path: str, progress: QProgressBar):
+def genFlatfield(first_scan: int, last_scan: int, path: str, progress: QProgressBar, application: QApplication):
     flatfield = numpy.zeros((240, 560), dtype=numpy.int64)
     if os.path.basename(path).split('_')[-1].split('.')[-2] == "0001":
         extension = "_0001.nxs"
@@ -53,8 +53,12 @@ def genFlatfield(first_scan: int, last_scan: int, path: str, progress: QProgress
             with File(os.path.join(directory_path, filename), mode='r') as h5file:
                 for data in get_dataset(h5file, DatasetPathWithAttribute("interpretation",b"image")):
                     flatfield += data
-                    completed += (last_scan - first_scan)//100
-                    progress.setValue(completed)
+            # Segment the progress bar according to number of scan
+            completed += 100/(last_scan - first_scan + 1)
+            # Update the progress bar value
+            progress.setValue(completed)
+            # Update the gui and the progress bar
+            application.processEvents()
         return flatfield
     except ValueError:
         QMessageBox(QMessageBox.Icon.Critical, "Failed", "You are running a flatfield on a different detector shape").exec()

@@ -17,8 +17,9 @@ import sys
 
 class XpadContext(QWidget):
 
-    def __init__(self):
+    def __init__(self, application: QApplication):
         super(QWidget, self).__init__()
+        self.application = application
         self.layout = QVBoxLayout(self)
 
         # Initialize tab screen
@@ -33,7 +34,7 @@ class XpadContext(QWidget):
 
         # Create first tab
         self.tab1.layout = QVBoxLayout(self.tab1)
-        self.data_context = DataContext()
+        self.data_context = DataContext(self.application)
         self.tab1.layout.addWidget(self.data_context)
 
         # Create second tab
@@ -52,8 +53,9 @@ class XpadContext(QWidget):
 
 class DataContext(QWidget):
 
-    def __init__(self):
+    def __init__(self, application):
         super(QWidget, self).__init__()
+        self.application = application
         self.layout = QGridLayout(self)
 
         self.colormap = Colormap("viridis", normalization='log')
@@ -133,6 +135,7 @@ class DataContext(QWidget):
 
         self.flat_scan_label1 = QLabel("Initial flat scan : ")
         self.flat_scan_input1 = QLineEdit()
+        self.flat_scan_input1.setReadOnly(True)
         self.flat_scan_button1 = QPushButton("Browse file for first scan")
         self.flat_scan_button1.clicked.connect(self.browseFile)
 
@@ -169,7 +172,7 @@ class DataContext(QWidget):
         cursor_position = QCursor.pos()
         directory = self.getCurrentDirectory()
         # Helps multiple uses of this function without rewriting it. If the cursor is in the left half-screen part, user wants to chose an experiment file
-        if cursor_position.x() <= QApplication.desktop().screenGeometry().width()//2:
+        if cursor_position.x() <= self.application.desktop().screenGeometry().width()//2:
             self.scan, _ = QFileDialog.getOpenFileName(self, 'Choose the scan file you want to \
 visualize.', directory, '*.nxs')
             self.scan_label.setText(self.scan.split('/')[-1])
@@ -195,7 +198,7 @@ compute.', directory, '*.nxs *.hdf5')
             last_scan = int(self.flat_scan_input2.text())
             if first_scan > last_scan:
                 first_scan, last_scan = last_scan, first_scan
-            self.result = flatfield.genFlatfield(first_scan, last_scan, self.flat_scan, self.flat_scan_progress)
+            self.result = flatfield.genFlatfield(first_scan, last_scan, self.flat_scan, self.flat_scan_progress, self.application)
             self.flatfield_output.setText(f"flatfield_{first_scan}_{last_scan}.nxs")
             self.data_viewer.addImage(self.result, colormap=self.colormap, xlabel='X in pixels', ylabel='Y in pixels')
 
