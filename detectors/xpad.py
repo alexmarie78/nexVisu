@@ -200,13 +200,16 @@ class DataContext(QWidget):
         if cursor_position.x() <= self.application.desktop().screenGeometry().width()//2:
             self.scan, _ = QFileDialog.getOpenFileName(self, 'Choose the scan file you want to \
 visualize.', directory, '*.nxs')
-            self.scan_label.setText(self.scan.split('/')[-1])
-            self.scanLabelChanged.emit(self.scan)
+            if not self.scan == "":
+                self.scan_label.setText(self.scan.split('/')[-1])
+                self.scanLabelChanged.emit(self.scan)
         # Else it means user wants to chose a flatscan that will help reduce the noise in the experiment file
         else:
             self.flat_scan, _ = QFileDialog.getOpenFileName(self, 'Choose the flatscan file you want to \
 compute.', directory, '*.nxs *.hdf5')
-            self.flat_scan_input1.setText(self.flat_scan.split('/')[-1])
+            if not self.flat_scan == "":
+                self.flat_scan_viewer.clear()
+                self.flat_scan_input1.setText(self.flat_scan.split('/')[-1])
 
     def get_current_directory(self) -> str:
         """return the path of the current directory,
