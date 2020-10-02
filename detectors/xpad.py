@@ -116,9 +116,10 @@ class DataContext(QWidget):
         self.gamma_input = QLineEdit()
         self.gamma_input.textChanged.connect(self.distance_computation)
 
-        self.distance_label = QLabel("distance in pixel/degree : ")
+        self.distance_label = QLabel("number of pixel/degree : ")
         self.distance_output = QLineEdit()
-        self.distance_output.setReadOnly(True)
+        # self.distance_output.setReadOnly(True)
+        self.distance_output.textChanged.connect(self.distance_computation)
 
         self.scan_title = QLabel("Scan n° : ")
         self.scan_title.setFont(font)
@@ -249,11 +250,7 @@ compute.', directory, '*.nxs *.hdf5')
             self.contextual_data["y"] = float(self.y_input.text())
             self.contextual_data["delta_offset"] = float(self.delta_input.text())
             self.contextual_data["gamma_offset"] = float(self.gamma_input.text())
-
-            distance = 0
-
-            self.distance_output.setText(str(distance))
-            self.contextual_data["distance"] = distance
+            self.contextual_data["distance"] = float(self.distance_output.text())
             self.contextualDataEntered.emit(self.contextual_data)
         except ValueError:
             pass
