@@ -40,6 +40,7 @@ class XpadContext(QWidget):
 
         self.data_context.scanLabelChanged.connect(self.xpad_visualisation.set_data)
         self.data_context.contextualDataEntered.connect(self.xpad_visualisation.unfold_raw_data)
+        self.data_context.usingFlat.connect(self.send_flatfield_image)
 
         # Add tabs to widget
         self.layout.addWidget(self.tabs)
@@ -50,16 +51,21 @@ class XpadContext(QWidget):
         for currentQTableWidgetItem in self.tableWidget.selectedItems():
             print(currentQTableWidgetItem.row(), currentQTableWidgetItem.column(), currentQTableWidgetItem.text())
 
+    def send_flatfield_image(self) -> None:
+        self.xpad_visualisation.get_flatfield(self.data_context.send_flatfield())
+
 class DataContext(QWidget):
     # Custom signal to transmit datas
     scanLabelChanged = pyqtSignal(str)
     contextualDataEntered = pyqtSignal(dict)
+    usingFlat = pyqtSignal()
 
     def __init__(self, application):
         super(QWidget, self).__init__()
         self.application = application
         self.layout = QGridLayout(self)
         self.contextual_data = {}
+        self.flat_saved = False
 
         self.colormap = Colormap("viridis", normalization='log')
 
@@ -156,29 +162,36 @@ class DataContext(QWidget):
         self.flat_scan_run.clicked.connect(self.generate_flatfield)
 
         self.flat_scan_progress = QProgressBar(self)
+        self.flat_scan_progress.setVisible(False)
 
         self.flat_scan_viewer = Plot2D(self)
         self.flat_scan_viewer.setYAxisInverted()
         self.flat_scan_viewer.setKeepDataAspectRatio()
 
         self.flatfield_label = QLabel("Flatfield name : ")
-        self.flatfield_output = QLabel()
+        self.flatfield_output = QLineEdit()
+        self.flatfield_output.setReadOnly(True)
+        self.flatfield_output.textChanged.connect(self.reset_saved_flat)
 
         self.flat_save_button = QPushButton("Save flatfield")
-        self.flat_save_button.setVisible(False)
         self.flat_save_button.clicked.connect(self.save_flatfield)
+
+        self.flat_use_box = QCheckBox("Use the flat to process images")
+        self.flat_use_box.setChecked(False)
+        self.flat_use_box.stateChanged.connect(self.use_flatfield)
 
         self.upper_right_corner_layout.addWidget(self.flat_scan_label1, 0, 0)
         self.upper_right_corner_layout.addWidget(self.flat_scan_input1, 0, 1)
         self.upper_right_corner_layout.addWidget(self.flat_scan_button1, 0, 2)
         self.upper_right_corner_layout.addWidget(self.flat_scan_label2, 1, 0)
         self.upper_right_corner_layout.addWidget(self.flat_scan_input2, 1, 1)
-        self.upper_right_corner_layout.addWidget(self.flat_scan_run, 2, 0)
-        self.upper_right_corner_layout.addWidget(self.flat_scan_progress, 2, 1)
-        self.upper_right_corner_layout.addWidget(self.flatfield_label, 3, 0)
-        self.upper_right_corner_layout.addWidget(self.flatfield_output, 3, 1)
-        self.upper_right_corner_layout.addWidget(self.flat_save_button, 3, 2)
-        self.upper_right_corner_layout.addWidget(self.flat_scan_viewer, 4, 0, 1, 4)
+        self.upper_right_corner_layout.addWidget(self.flat_scan_run, 1, 2)
+        self.upper_right_corner_layout.addWidget(self.flat_scan_progress, 1, 3)
+        self.upper_right_corner_layout.addWidget(self.flatfield_label, 2, 0)
+        self.upper_right_corner_layout.addWidget(self.flatfield_output, 2, 1)
+        self.upper_right_corner_layout.addWidget(self.flat_save_button, 2, 2)
+        self.upper_right_corner_layout.addWidget(self.flat_use_box, 2, 3)
+        self.upper_right_corner_layout.addWidget(self.flat_scan_viewer, 4, 0, -1, -1)
 
     def browse_file(self) -> None:
         cursor_position = QCursor.pos()
@@ -212,14 +225,20 @@ compute.', directory, '*.nxs *.hdf5')
             if first_scan > last_scan:
                 first_scan, last_scan = last_scan, first_scan
             self.result = gen_flatfield(first_scan, last_scan, self.flat_scan, self.flat_scan_progress, self.application)
-            self.flatfield_output.setText(f"flatfield_{first_scan}_{last_scan}.nxs")
+            self.flatfield_output.setText(f"flatfield_{first_scan}_{last_scan}")
             self.flat_scan_viewer.addImage(self.result, colormap=self.colormap, xlabel='X in pixels', ylabel='Y in pixels')
-            self.flat_save_button.setVisible(True)
 
     def save_flatfield(self) -> None:
-        if hasattr(self, 'result'):
-            numpy.save(os.path.join(self.get_current_directory(), self.flatfield_output.text()),
+        # If there is a flatfield calculated and it has not yet been saved.
+        if hasattr(self, 'result') and not self.flat_saved:
+            path = os.path.realpath(__file__).split('/')[:-3]
+            path = '/'.join(path)
+            numpy.save(os.path.join(path, self.flatfield_output.text()),
                        self.result, False)
+            QMessageBox(QMessageBox.Icon.Information,"Flatfield saved", f"The {self.flatfield_output.text()} file has been saved in {path}.").exec()
+            self.flat_saved = True
+        else:
+            QMessageBox(QMessageBox.Icon.Critical,"Can't save flatfield", "You must select or compute a flatfield scan before saving it.").exec()
 
     def distance_computation(self) -> None:
         try:
@@ -235,3 +254,13 @@ compute.', directory, '*.nxs *.hdf5')
             self.contextualDataEntered.emit(self.contextual_data)
         except ValueError:
             pass
+
+    def use_flatfield(self) -> None:
+        self.usingFlat.emit()
+
+    def send_flatfield(self) -> numpy.ndarray:
+        if self.flat_use_box.isChecked():
+            return self.result
+
+    def reset_saved_flat(self) -> None:
+        self.flat_saved = False

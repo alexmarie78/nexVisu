@@ -12,6 +12,7 @@ class XpadVisualisation(QWidget):
         super(QWidget, self).__init__()
         self.layout = QVBoxLayout(self)
         self.raw_data = None
+        self.flatfield_scan = None
 
         # Initialize tab screen
         self.tabs = QTabWidget()
@@ -55,7 +56,10 @@ class XpadVisualisation(QWidget):
         # Unfold raw datas
         # Cristian function !!
 
-        # correct_and_unfold_data(flat, self.raw_data, calibration)
+        # correct_and_unfold_data(self.flatfield_scan, self.raw_data, calibration)
 
         # Plot them in stack
         self.unfolded_data_viewer.set_movie(self.raw_data)
+
+    def get_flatfield(self, flat_img: numpy.ndarray):
+        self.flatfield_scan = flat_img
