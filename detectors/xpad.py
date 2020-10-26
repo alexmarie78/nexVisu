@@ -229,11 +229,16 @@ compute.', directory, '*.nxs *.hdf5')
             if first_scan > last_scan:
                 first_scan, last_scan = last_scan, first_scan
             # Generate the flatfield file
-            self.result = gen_flatfield(first_scan, last_scan, self.flat_scan, self.flat_scan_progress, self.application)
-            self.flatfield_output.setText(f"flatfield_{first_scan}_{last_scan}")
-            self.flat_scan_viewer.addImage(self.result, colormap=self.colormap, xlabel='X in pixels', ylabel='Y in pixels')
-            # We emit the signal when the flatfield had been computed, preventing the app from crashing if the user already checked the box to use the flatfield.
-            self.usingFlat.emit()
+            try:
+                self.result = gen_flatfield(first_scan, last_scan, self.flat_scan, self.flat_scan_progress, self.application)
+                self.flatfield_output.setText(f"flatfield_{first_scan}_{last_scan}")
+                self.flat_scan_viewer.addImage(self.result, colormap=self.colormap, xlabel='X in pixels', ylabel='Y in pixels')
+                # We emit the signal when the flatfield had been computed, preventing the app from crashing if the user already checked the box to use the flatfield.
+                self.usingFlat.emit()
+            except TypeError:
+                QMessageBox(QMessageBox.Icon.Critical,"Can't run a flat computation", "You must select scans with xpad images.").exec()
+                self.flat_scan_input1.setText("")
+                self.flat_scan_input2.setText("")
 
     def save_flatfield(self) -> None:
         # If there is a flatfield calculated and it has not yet been saved.
@@ -260,7 +265,6 @@ compute.', directory, '*.nxs *.hdf5')
 
     def use_flatfield(self) -> None:
         if self.flat_use_box.isChecked():
-            print("hello")
             self.usingFlat.emit()
 
     def send_flatfield(self) -> numpy.ndarray:
