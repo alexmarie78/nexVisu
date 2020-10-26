@@ -243,14 +243,13 @@ compute.', directory, '*.nxs *.hdf5')
     def save_flatfield(self) -> None:
         # If there is a flatfield calculated and it has not yet been saved.
         if hasattr(self, 'result') and not self.flat_saved:
-            path = os.path.realpath(__file__).split('/')[:-3]
-            path = '/'.join(path)
-            numpy.save(os.path.join(path, self.flatfield_output.text()),
-                       self.result, False)
-            QMessageBox(QMessageBox.Icon.Information,"Flatfield saved", f"The {self.flatfield_output.text()} file has been saved in {path}.").exec()
-            self.flat_saved = True
+            directory = self.get_current_directory() + f"/{self.flatfield_output.text()}"
+            path, _ = QFileDialog.getSaveFileName(self, 'Save File', directory)
+            if path != "":
+                numpy.save(os.path.join(path), self.result, False)
+                self.flat_saved = True
         else:
-            QMessageBox(QMessageBox.Icon.Critical,"Can't save flatfield", "You must select or compute a flatfield scan before saving it.").exec()
+            QMessageBox(QMessageBox.Icon.Critical,"Can't save flatfield", "You must select or compute a flatfield scan before saving it. Or you might have already saved this flatfield").exec()
 
     def distance_computation(self) -> None:
         try:
