@@ -228,9 +228,12 @@ compute.', directory, '*.nxs *.hdf5')
             last_scan = int(self.flat_scan_input2.text())
             if first_scan > last_scan:
                 first_scan, last_scan = last_scan, first_scan
+            # Generate the flatfield file
             self.result = gen_flatfield(first_scan, last_scan, self.flat_scan, self.flat_scan_progress, self.application)
             self.flatfield_output.setText(f"flatfield_{first_scan}_{last_scan}")
             self.flat_scan_viewer.addImage(self.result, colormap=self.colormap, xlabel='X in pixels', ylabel='Y in pixels')
+            # We emit the signal when the flatfield had been computed, preventing the app from crashing if the user already checked the box to use the flatfield.
+            self.usingFlat.emit()
 
     def save_flatfield(self) -> None:
         # If there is a flatfield calculated and it has not yet been saved.
@@ -256,10 +259,12 @@ compute.', directory, '*.nxs *.hdf5')
             pass
 
     def use_flatfield(self) -> None:
-        self.usingFlat.emit()
+        if self.flat_use_box.isChecked():
+            print("hello")
+            self.usingFlat.emit()
 
     def send_flatfield(self) -> numpy.ndarray:
-        if self.flat_use_box.isChecked():
+        if self.flat_use_box.isChecked() and hasattr(self, "result"):
             return self.result
 
     def reset_saved_flat(self) -> None:
