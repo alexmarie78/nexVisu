@@ -41,6 +41,7 @@ class XpadContext(QWidget):
         self.data_context.scanLabelChanged.connect(self.xpad_visualisation.set_data)
         self.data_context.contextualDataEntered.connect(self.xpad_visualisation.unfold_raw_data)
         self.data_context.usingFlat.connect(self.send_flatfield_image)
+        self.data_context.notUsingFlat.connect(self.send_empty_flatfield)
 
         # Add tabs to widget
         self.layout.addWidget(self.tabs)
@@ -54,11 +55,15 @@ class XpadContext(QWidget):
     def send_flatfield_image(self) -> None:
         self.xpad_visualisation.get_flatfield(self.data_context.send_flatfield())
 
+    def send_empty_flatfield(self) -> None:
+        self.xpad_visualisation.get_flatfield(None)
+
 class DataContext(QWidget):
     # Custom signal to transmit datas
     scanLabelChanged = pyqtSignal(str)
     contextualDataEntered = pyqtSignal(dict)
     usingFlat = pyqtSignal()
+    notUsingFlat = pyqtSignal()
 
     def __init__(self, application):
         super(QWidget, self).__init__()
@@ -277,6 +282,8 @@ compute.', directory, '*.nxs *.hdf5')
     def use_flatfield(self) -> None:
         if self.flat_use_box.isChecked():
             self.usingFlat.emit()
+        else:
+            self.notUsingFlat.emit()
 
     def send_flatfield(self) -> numpy.ndarray:
         if self.flat_use_box.isChecked() and hasattr(self, "result"):
