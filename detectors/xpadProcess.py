@@ -1,8 +1,10 @@
 from h5py import File
+from matplotlib.pyplot import tripcolor
 from PyQt5.QtWidgets import QPushButton, QWidget, QTabWidget, QVBoxLayout
 from PyQt5.QtCore import pyqtSlot
 from utils.dataViewer import DataViewer
-from utils.flatfield import get_dataset, DatasetPathWithAttribute, correct_and_unfold_data
+from utils.nexusNavigation import get_dataset, DatasetPathWithAttribute
+from utils.imageProcessing import correct_and_unfold_data
 
 import numpy
 
@@ -12,7 +14,8 @@ class XpadVisualisation(QWidget):
         super(QWidget, self).__init__()
         self.layout = QVBoxLayout(self)
         self.raw_data = None
-        self.flatfield_scan = None
+        self.flatfield_image = None
+        self.path = None
 
         # Initialize tab screen
         self.tabs = QTabWidget()
@@ -22,9 +25,9 @@ class XpadVisualisation(QWidget):
         self.tabs.resize(400,300)
 
         # Add tabs
-        self.tabs.addTab(self.tab1,"Raw data")
-        self.tabs.addTab(self.tab2,"Unfolded data")
-        self.tabs.addTab(self.tab3,"Fitted data")
+        self.tabs.addTab(self.tab1, "Raw data")
+        self.tabs.addTab(self.tab2, "Unfolded data")
+        self.tabs.addTab(self.tab3, "Fitted data")
 
         # Create first tab
         self.tab1.layout = QVBoxLayout(self.tab1)
@@ -46,6 +49,7 @@ class XpadVisualisation(QWidget):
             print(currentQTableWidgetItem.row(), currentQTableWidgetItem.column(), currentQTableWidgetItem.text())
 
     def set_data(self, path: str) -> None:
+        self.path = path
         with File(path, mode='r') as h5file:
             self.raw_data = numpy.zeros(get_dataset(h5file, DatasetPathWithAttribute("interpretation",b"image")).shape)
             for idx, data in enumerate(get_dataset(h5file, DatasetPathWithAttribute("interpretation",b"image"))):
@@ -54,12 +58,14 @@ class XpadVisualisation(QWidget):
 
     def unfold_raw_data(self, calibration: dict) -> None:
         # Unfold raw datas
-        # Cristian function !!
-
-        # correct_and_unfold_data(self.flatfield_scan, self.raw_data, calibration)
-
+        unfolded_data = correct_and_unfold_data(self.flatfield_image, self.raw_data, self.path, calibration)
         # Plot them in stack
-        self.unfolded_data_viewer.set_movie(self.raw_data)
+        for unfolded_image in unfolded_data:
+            print(len(unfolded_image[1]))
+            print(len(unfolded_image[2]))
+            print(len(unfolded_image[3]))
+            tripcolor(unfolded_image[1], unfolded_image[2], unfolded_image[3])
+        # self.unfolded_data_viewer.set_movie(unfolded_data)
 
     def get_flatfield(self, flat_img: numpy.ndarray):
-        self.flatfield_scan = flat_img
+        self.flatfield_image = flat_img

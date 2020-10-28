@@ -5,7 +5,7 @@ from PyQt5.QtCore import pyqtSlot, pyqtSignal, Qt
 from PyQt5.QtGui import QFont, QCursor
 from silx.gui.colors import Colormap
 from silx.gui.plot import Plot2D
-from utils.flatfield import gen_flatfield
+from utils.imageProcessing import gen_flatfield
 
 import numpy
 import os
