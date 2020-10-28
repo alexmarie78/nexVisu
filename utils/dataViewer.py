@@ -96,7 +96,7 @@ class PauseMovie(PlotAction):
                             icon='item-2dim',
                             text='pause',
                             tooltip='Pauses the movie of the stacked images',
-                            triggered=self.pauseMovie,
+                            triggered=self.pause_movie,
                             parent=parent)
         self.movie = movie
 
@@ -112,7 +112,7 @@ class ResumeMovie(PlotAction):
                             icon='next',
                             text='resume',
                             tooltip='Resumes the movie of the stacked images',
-                            triggered=self.resumeMovie,
+                            triggered=self.resume_movie,
                             parent=parent)
         self.movie = movie
 
