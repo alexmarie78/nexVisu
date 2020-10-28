@@ -1,5 +1,5 @@
 from functools import partial
-from h5py import Dataset
+from h5py import Dataset, File
 from typing import NamedTuple, Optional, Text, Union
 # Generic hdf5 access types.
 DatasetPathContains = NamedTuple("DatasetPathContains", [("path", Text)])

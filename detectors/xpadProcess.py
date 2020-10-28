@@ -1,5 +1,6 @@
 from h5py import File
-from matplotlib.pyplot import tripcolor
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT
+from matplotlib.figure import Figure
 from PyQt5.QtWidgets import QPushButton, QWidget, QTabWidget, QVBoxLayout
 from PyQt5.QtCore import pyqtSlot
 from utils.dataViewer import DataViewer
@@ -7,6 +8,15 @@ from utils.nexusNavigation import get_dataset, DatasetPathWithAttribute
 from utils.imageProcessing import correct_and_unfold_data
 
 import numpy
+
+
+class UnfoldCanvas(FigureCanvasQTAgg):
+
+    def __init__(self, parent=None, width=5, height=4, dpi=100):
+        fig = Figure(figsize=(width, height), dpi=dpi)
+        self.axes = fig.add_subplot(111)
+        super(UnfoldCanvas, self).__init__(fig)
+
 
 class XpadVisualisation(QWidget):
 
@@ -36,7 +46,9 @@ class XpadVisualisation(QWidget):
 
         # Create second tab
         self.tab2.layout = QVBoxLayout(self.tab2)
-        self.unfolded_data_viewer = DataViewer(self)
+        self.unfolded_data_viewer = UnfoldCanvas()
+        self.toolbar = NavigationToolbar2QT(self.unfolded_data_viewer, self)
+        self.tab2.layout.addWidget(self.toolbar)
         self.tab2.layout.addWidget(self.unfolded_data_viewer)
 
         # Add tabs to widget
@@ -61,11 +73,11 @@ class XpadVisualisation(QWidget):
         unfolded_data = correct_and_unfold_data(self.flatfield_image, self.raw_data, self.path, calibration)
         # Plot them in stack
         for unfolded_image in unfolded_data:
-            print(len(unfolded_image[1]))
-            print(len(unfolded_image[2]))
-            print(len(unfolded_image[3]))
-            tripcolor(unfolded_image[1], unfolded_image[2], unfolded_image[3])
+            self.unfolded_data_viewer.axes.tripcolor(unfolded_image[1], unfolded_image[2], unfolded_image[3])
+            self.unfolded_data_viewer.show()
         # self.unfolded_data_viewer.set_movie(unfolded_data)
 
     def get_flatfield(self, flat_img: numpy.ndarray):
         self.flatfield_image = flat_img
+
+
