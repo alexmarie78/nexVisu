@@ -1,7 +1,7 @@
 from h5py import Dataset, File
 from PyQt5.QtWidgets import QMessageBox, QProgressBar, QApplication, QWidget
 from scipy import ndimage
-from utils.nexusNavigation import get_dataset, DatasetPathWithAttribute
+from utils.nexusNavigation import get_dataset, DatasetPathWithAttribute, DatasetPathContains
 
 import numpy
 import os
@@ -55,15 +55,16 @@ def correct_and_unfold_data(flat_image: numpy.ndarray, images: numpy.ndarray, pa
     number_of_chips = images.shape[2] // chip_size_x # detector dimension, XPAD S-140
     distance = contextual_data["distance"] / numpy.tan(1.0 * deg2rad)
     lines_to_remove_array = [0, -3]
-    factorIdoublePixel = 1.0
 
     if not flat_image is None:
+        factorIdoublePixel = 1.0
         flat_image = 1.0 * flat_image / flat_image.mean()
         flat_image_inv = 1.0 / flat_image
         flat_image_inv[numpy.isnan(flat_image_inv)] = -10000000
         flat_image_inv[numpy.isinf(flat_image_inv)] = -10000000
     else:
         flat_image_inv = numpy.ones_like(images[0])
+        factorIdoublePixel = 2.5
 
     lines_to_remove = -3
     #size of the resulting (corrected) image
@@ -112,7 +113,10 @@ def correct_and_unfold_data(flat_image: numpy.ndarray, images: numpy.ndarray, pa
 
     # Collect deltas and gammas.
     deltas, gammas = get_angles(path)
-    for idx, data in enumerate(images):
+    # for idx, data in enumerate(images):
+    index = 2
+    if index == 2:
+        data = images[2]
         for pointIndex in range(deltas.shape[0]):
             delta = deltas[pointIndex]
 	    #extracting the XY coordinates for the rest of the scan transformation
@@ -169,16 +173,9 @@ def correct_and_unfold_data(flat_image: numpy.ndarray, images: numpy.ndarray, pa
             #end geometry
 
             #dealing now with the intensitiespointIndex
-            # thisSize = image_corr1_sizeX * image_corr1_sizeY
             thisImage = data[pointIndex]
             thisImage = flat_image_inv * thisImage
             thisImage = ndimage.median_filter(thisImage, 3)
-
-            """
-            #masking the bad pixels
-            thisImage[110:122, 373:385] =  -1000000000
-            thisImage[112:118, 541:547] =  -1000000000
-            """
 
             thisCorrectedImage = numpy.zeros((image_corr1_sizeY, image_corr1_sizeX))
             Ifactor = newX_Ifactor_array # x
@@ -188,16 +185,13 @@ def correct_and_unfold_data(flat_image: numpy.ndarray, images: numpy.ndarray, pa
             for x in range (0, image_corr1_sizeX):
                 thisCorrectedImage[:, x] = thisImage[newY_array[:], newX_array[x]]
                 if Ifactor[x] < 0:
-                    #print "%s %s" %(x, Ifactor[x])
-                    thisCorrectedImage[:, x] = (thisImage[newY_array[:], newX_array[x] - 1] + thisImage[newY_array[:], newX_array[x] + 1]) / 2.0 / factorIdoublePixel
+                    thisCorrectedImage[:, x] = (thisImage[newY_array[:], newX_array[x] - 1] + thisImage[newY_array[:], newX_array[x] + 1]) / factorIdoublePixel
                     thisCorrectedImage[numpy.isnan(thisCorrectedImage)] = -100000
 
             # correct the double lines (last and 1st line of the modules, at their junction)
             lineIndex1 = chip_size_y - 1 # last line of module1 = 119, is the 1st line to correct
             lineIndex5 = lineIndex1 + 3 + 1 # 1st line of module2 (after adding the 3 empty lines), becomes the 5th line tocorrect
             lineIndex2 = lineIndex1 + 1; lineIndex3 = lineIndex1 + 2; lineIndex4 = lineIndex1 + 3
-            #thisSize = image_corr1_sizeX*image_corr1_sizeY #out of the loop
-            #IntensityArray = numpy.zeros(thisSize)
 
             i1 = thisCorrectedImage[lineIndex1, :]; i5 = thisCorrectedImage[lineIndex5, :]
             i1new = i1 / factorIdoublePixel; i5new = i5 / factorIdoublePixel; i3 = (i1new + i5new) / 2.0
@@ -214,31 +208,52 @@ def correct_and_unfold_data(flat_image: numpy.ndarray, images: numpy.ndarray, pa
                     psi.append(psiArray[y, x])
                     corrected.append(thisCorrectedImage[y, x])
             unfolded_data.append((pointIndex, tth, psi, corrected))
-            """
-            #saving the Intensity file (in correspondence with XY file)
-            xyzLine = ""
-            for x in range (0, image_corr1_sizeX):
-                for y in range (0, image_corr1_sizeY):
-                    xyzLine += ""+str(twoThArray[y, x])+" "+str(psiArray[y, x])+" "+str(thisCorrectedImage[y, x])+"\n"
-            #saving the file
-            #####ATTENTION####
-            XYZlogFileName = "raw_%d.txt" %(pointIndex+0)#modifier cette valeur selon le découpage...
-            with open(fileSavePath+XYZlogFileName, "a") as saveFile:
-                saveFile.write(xyzLine)
-            """
     return unfolded_data
 
 def get_angles(path: str) -> (numpy.ndarray, numpy.ndarray):
         with File(path, mode='r') as h5file:
-            delta_array = numpy.zeros(get_dataset(h5file,
-                                                  DatasetPathWithAttribute("label", b"Delta")).shape)
-            for idx, delta in enumerate(get_dataset(h5file,
-                                                    DatasetPathWithAttribute("label", b"Delta"))):
-                delta_array[idx] = delta
-            gamma_array = numpy.zeros(get_dataset(h5file,
-                                                  DatasetPathWithAttribute("label", b"Gamma")).shape)
-            # Test to iterate through gammas, if it fails, there is only one gamma
-            for idx, gamma in enumerate(get_dataset(h5file,
-                                                    DatasetPathWithAttribute("label", b"Gamma"))):
-                gamma_array[idx] = gamma
+            try:
+                delta_array = numpy.zeros(get_dataset(h5file,
+                                                      DatasetPathWithAttribute("label", b"Delta")).shape)
+                for idx, delta in enumerate(get_dataset(h5file,
+                                                        DatasetPathWithAttribute("label", b"Delta"))):
+                    delta_array[idx] = delta
+            except AttributeError:
+                try:
+                    delta_array = numpy.zeros(get_dataset(h5file,
+                                                          DatasetPathContains("d13-1-cx1__EX__DIF.1-DELTA__#1/raw_value")).shape)
+                    for idx, delta in enumerate(get_dataset(h5file,
+                                                            DatasetPathContains("d13-1-cx1__EX__DIF.1-DELTA__#1/raw_value"))):
+                        delta_array[idx] = delta
+                except AttributeError:
+                    try:
+                        delta_array = numpy.zeros(get_dataset(h5file,
+                                                              DatasetPathContains("D13-1-CX1__EX__DIF.1-DELTA__#1/raw_value")).shape)
+                        for idx, delta in enumerate(get_dataset(h5file,
+                                                                DatasetPathContains("D13-1-CX1__EX__DIF.1-DELTA__#1/raw_value"))):
+                            delta_array[idx] = delta
+                    except AttributeError:
+                        delta_array = 0
+            try:
+                gamma_array = numpy.zeros(get_dataset(h5file,
+                                                      DatasetPathWithAttribute("label", b"Gamma")).shape)
+                for idx, gamma in enumerate(get_dataset(h5file,
+                                                        DatasetPathWithAttribute("label", b"Gamma"))):
+                    gamma_array[idx] = gamma
+            except AttributeError:
+                try:
+                    gamma_array = numpy.zeros(get_dataset(h5file,
+                                                          DatasetPathContains("d13-1-cx1__EX__DIF.1-GAMMA__#1/raw_value")).shape)
+                    for idx, gamma in enumerate(get_dataset(h5file,
+                                                            DatasetPathContains("d13-1-cx1__EX__DIF.1-GAMMA__#1/raw_value"))):
+                        gamma_array[idx] = gamma
+                except AttributeError:
+                    try:
+                        gamma_array = numpy.zeros(get_dataset(h5file,
+                                                              DatasetPathContains("D13-1-CX1__EX__DIF.1-GAMMA__#1/raw_value")).shape)
+                        for idx, gamma in enumerate(get_dataset(h5file,
+                                                                DatasetPathContains("D13-1-CX1__EX__DIF.1-GAMMA__#1/raw_value"))):
+                            gamma_array[idx] = gamma
+                    except AttributeError:
+                        gamma_array = 0
         return delta_array, gamma_array

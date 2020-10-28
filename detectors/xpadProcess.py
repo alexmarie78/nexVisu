@@ -51,6 +51,8 @@ class XpadVisualisation(QWidget):
         self.tab2.layout.addWidget(self.toolbar)
         self.tab2.layout.addWidget(self.unfolded_data_viewer)
 
+        self.unfolded_data_viewer.show()
+
         # Add tabs to widget
         self.layout.addWidget(self.tabs)
 
@@ -69,12 +71,16 @@ class XpadVisualisation(QWidget):
         self.raw_data_viewer.set_movie(self.raw_data)
 
     def unfold_raw_data(self, calibration: dict) -> None:
+
+        self.unfolded_data_viewer.axes.cla()
+        
         # Unfold raw datas
         unfolded_data = correct_and_unfold_data(self.flatfield_image, self.raw_data, self.path, calibration)
         # Plot them in stack
         for unfolded_image in unfolded_data:
             self.unfolded_data_viewer.axes.tripcolor(unfolded_image[1], unfolded_image[2], unfolded_image[3], cmap='viridis')
-            self.unfolded_data_viewer.show()
+            self.unfolded_data_viewer.draw()
+
 
     def get_flatfield(self, flat_img: numpy.ndarray):
         self.flatfield_image = flat_img
