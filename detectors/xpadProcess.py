@@ -73,9 +73,8 @@ class XpadVisualisation(QWidget):
         unfolded_data = correct_and_unfold_data(self.flatfield_image, self.raw_data, self.path, calibration)
         # Plot them in stack
         for unfolded_image in unfolded_data:
-            self.unfolded_data_viewer.axes.tripcolor(unfolded_image[1], unfolded_image[2], unfolded_image[3])
+            self.unfolded_data_viewer.axes.tripcolor(unfolded_image[1], unfolded_image[2], unfolded_image[3], cmap='viridis')
             self.unfolded_data_viewer.show()
-        # self.unfolded_data_viewer.set_movie(unfolded_data)
 
     def get_flatfield(self, flat_img: numpy.ndarray):
         self.flatfield_image = flat_img
