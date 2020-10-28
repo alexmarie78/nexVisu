@@ -118,7 +118,7 @@ class DataContext(QWidget):
 
         self.distance_label = QLabel("number of pixel/degree : ")
         self.distance_output = QLineEdit()
-        # self.distance_output.setReadOnly(True)
+        self.distance_output.setReadOnly(True)
         self.distance_output.textChanged.connect(self.distance_computation)
 
         self.scan_title = QLabel("Scan n° : ")
@@ -201,9 +201,11 @@ class DataContext(QWidget):
         if cursor_position.x() <= self.application.desktop().screenGeometry().width()//2:
             self.scan, _ = QFileDialog.getOpenFileName(self, 'Choose the scan file you want to \
 visualize.', directory, '*.nxs')
-            if not self.scan == "":
+            if self.scan != "":
                 self.scan_label.setText(self.scan.split('/')[-1])
                 self.scanLabelChanged.emit(self.scan)
+            else:
+                self.scan_label.setText("Click on the button to search for the scan you want")
         # Else it means user wants to chose a flatscan that will help reduce the noise in the experiment file
         else:
             self.flat_scan, _ = QFileDialog.getOpenFileName(self, 'Choose the flatscan file you want to \
@@ -257,10 +259,20 @@ compute.', directory, '*.nxs *.hdf5')
             self.contextual_data["y"] = float(self.y_input.text())
             self.contextual_data["delta_offset"] = float(self.delta_input.text())
             self.contextual_data["gamma_offset"] = float(self.gamma_input.text())
+            self.distance_output.setText("76.78")
             self.contextual_data["distance"] = float(self.distance_output.text())
-            self.contextualDataEntered.emit(self.contextual_data)
+            if not hasattr(self, "send_data_button"):
+                self.send_data_button = QPushButton("Send contextual data")
+                self.upper_left_corner_layout.addWidget(self.send_data_button, 5, 3)
+                self.send_data_button.clicked.connect(self.send_context_data)
         except ValueError:
             pass
+
+    def send_context_data(self) -> None:
+        if hasattr(self, "scan") and self.scan != "":
+            self.contextualDataEntered.emit(self.contextual_data)
+        else:
+            QMessageBox(QMessageBox.Icon.Critical, "Can't send contextual data", "You must chose a scan file before sending the contextual data linked to it.").exec()
 
     def use_flatfield(self) -> None:
         if self.flat_use_box.isChecked():
