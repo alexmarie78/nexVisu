@@ -264,7 +264,7 @@ compute.', directory, '*.nxs *.hdf5')
             self.contextual_data["y"] = float(self.y_input.text())
             self.contextual_data["delta_offset"] = float(self.delta_input.text())
             self.contextual_data["gamma_offset"] = float(self.gamma_input.text())
-            self.distance_output.setText("76.78")
+            self.distance_output.setText("80.33")
             self.contextual_data["distance"] = float(self.distance_output.text())
             if not hasattr(self, "send_data_button"):
                 self.send_data_button = QPushButton("Send contextual data")

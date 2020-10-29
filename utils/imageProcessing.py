@@ -119,6 +119,7 @@ def correct_and_unfold_data(flat_image: numpy.ndarray, images: numpy.ndarray, pa
         data = images[2]
         for pointIndex in range(deltas.shape[0]):
             delta = deltas[pointIndex]
+            print(delta)
 	    #extracting the XY coordinates for the rest of the scan transformation
             #========psiAve = 1, deltaPsi = 1=============================================
 
