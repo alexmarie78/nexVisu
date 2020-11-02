@@ -66,9 +66,7 @@ class XpadVisualisation(QWidget):
     def set_data(self, path: str) -> None:
         self.path = path
         with File(path, mode='r') as h5file:
-            self.raw_data = numpy.zeros(get_dataset(h5file, DataPath.IMAGE_INTERPRETATION).shape)
-            for idx, data in enumerate(get_dataset(h5file, DataPath.IMAGE_INTERPRETATION)):
-                self.raw_data[idx] = data
+            self.raw_data = get_dataset(h5file, DataPath.IMAGE_INTERPRETATION.value)[:]
         self.raw_data_viewer.set_movie(self.raw_data)
 
     def unfold_raw_data(self, calibration: dict) -> None:
