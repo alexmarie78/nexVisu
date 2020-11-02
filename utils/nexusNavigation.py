@@ -13,6 +13,7 @@ DatasetPathWithAttribute = NamedTuple("DatasetPathWithAttribute",
 DatasetPath = Union[DatasetPathContains,
                     DatasetPathWithAttribute]
 
+
 def get_dataset(h5file: File, path: DatasetPath) -> Optional[Dataset]:
     res = None
     if isinstance(path, DatasetPathContains):
@@ -23,11 +24,13 @@ def get_dataset(h5file: File, path: DatasetPath) -> Optional[Dataset]:
         res = h5file.visititems(partial(_v_attrs,  path.attribute, path.value))
     return res
 
+
 def _v_attrs(attribute: Text, value: Text, _name: Text, obj) -> Dataset:
     """extract all the images and accumulate them in the acc variable"""
     if isinstance(obj, Dataset):
         if attribute in obj.attrs and obj.attrs[attribute] == value:
             return obj
+
 
 def _v_item(key: Text, name: Text, obj: Dataset) -> Dataset:
     if key in name:
