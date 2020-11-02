@@ -203,7 +203,7 @@ class DataContext(QWidget):
 
     def browse_file(self) -> None:
         cursor_position = QCursor.pos()
-        directory = get_current_directory()
+        directory = get_current_directory().replace("/utils", "")
         # Helps multiple uses of this function without rewriting it. If the cursor is in the left half-screen part,
         # user wants to chose an experiment file
         if cursor_position.x() <= self.application.desktop().screenGeometry().width()//2:
@@ -216,8 +216,9 @@ visualize.', directory, '*.nxs')
                 self.scan_label.setText("Click on the button to search for the scan you want")
         # Else it means user wants to chose a flatscan that will help reduce the noise in the experiment file
         else:
-            self.flat_scan, _ = QFileDialog.getOpenFileName(self, 'Choose the flatscan file you want to \
-compute.', directory, '*.nxs *.hdf5')
+            self.flat_scan, _ = QFileDialog.getOpenFileName(self, "Choose the flatscan file you want to \
+compute.", directory, "*.nxs *.hdf5")
+            print(self.flat_scan)
             if not self.flat_scan == "":
                 self.flat_scan_viewer.clear()
                 self.flat_scan_input1.setText(self.flat_scan.split('/')[-1])
@@ -253,7 +254,7 @@ compute.', directory, '*.nxs *.hdf5')
     def save_flatfield(self) -> None:
         # If there is a flatfield calculated and it has not yet been saved.
         if hasattr(self, 'result') and not self.flat_saved:
-            directory = get_current_directory() + f"/{self.flatfield_output.text()}"
+            directory = get_current_directory().replace("/utils", "") + f"/{self.flatfield_output.text()}"
             path, _ = QFileDialog.getSaveFileName(self, 'Save File', directory)
             if path != "":
                 numpy.save(os.path.join(path), self.result, False)

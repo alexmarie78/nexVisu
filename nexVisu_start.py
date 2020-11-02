@@ -5,6 +5,7 @@ from PyQt5.QtCore import Qt
 from constants import Detectors
 from detectors import xpad, cirpad
 
+import os
 
 class Window(QMainWindow):
 
