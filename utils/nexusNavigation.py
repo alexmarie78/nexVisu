@@ -1,6 +1,9 @@
 from functools import partial
 from h5py import Dataset, File
 from typing import NamedTuple, Optional, Text, Union
+
+import os
+
 # Generic hdf5 access types.
 DatasetPathContains = NamedTuple("DatasetPathContains", [("path", Text)])
 DatasetPathContainsDefault = NamedTuple("DatasetPathContains", [("path", Text),
@@ -23,6 +26,12 @@ def get_dataset(h5file: File, path: DatasetPath) -> Optional[Dataset]:
     elif isinstance(path, DatasetPathWithAttribute):
         res = h5file.visititems(partial(_v_attrs,  path.attribute, path.value))
     return res
+
+
+def get_current_directory() -> str:
+    """return the path of the current directory,
+    aka where the script is running."""
+    return os.path.dirname(os.path.realpath(__file__))
 
 
 def _v_attrs(attribute: Text, value: Text, _name: Text, obj) -> Dataset:

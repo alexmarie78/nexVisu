@@ -1,10 +1,11 @@
+from constants import DataPath
 from h5py import File
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT
 from matplotlib.figure import Figure
-from PyQt5.QtWidgets import QPushButton, QWidget, QTabWidget, QVBoxLayout
+from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout
 from PyQt5.QtCore import pyqtSlot
 from utils.dataViewer import DataViewer
-from utils.nexusNavigation import get_dataset, DatasetPathWithAttribute
+from utils.nexusNavigation import get_dataset
 from utils.imageProcessing import correct_and_unfold_data
 
 import numpy
@@ -32,7 +33,7 @@ class XpadVisualisation(QWidget):
         self.tab1 = QWidget()
         self.tab2 = QWidget()
         self.tab3 = QWidget()
-        self.tabs.resize(400,300)
+        self.tabs.resize(400, 300)
 
         # Add tabs
         self.tabs.addTab(self.tab1, "Raw data")
@@ -65,8 +66,8 @@ class XpadVisualisation(QWidget):
     def set_data(self, path: str) -> None:
         self.path = path
         with File(path, mode='r') as h5file:
-            self.raw_data = numpy.zeros(get_dataset(h5file, DatasetPathWithAttribute("interpretation",b"image")).shape)
-            for idx, data in enumerate(get_dataset(h5file, DatasetPathWithAttribute("interpretation",b"image"))):
+            self.raw_data = numpy.zeros(get_dataset(h5file, DataPath.IMAGE_INTERPRETATION).shape)
+            for idx, data in enumerate(get_dataset(h5file, DataPath.IMAGE_INTERPRETATION)):
                 self.raw_data[idx] = data
         self.raw_data_viewer.set_movie(self.raw_data)
 
@@ -78,11 +79,11 @@ class XpadVisualisation(QWidget):
         unfolded_data = correct_and_unfold_data(self.flatfield_image, self.raw_data, self.path, calibration)
         # Plot them in stack
         for unfolded_image in unfolded_data:
-            self.unfolded_data_viewer.axes.tripcolor(unfolded_image[1], unfolded_image[2], unfolded_image[3], cmap='viridis')
+            self.unfolded_data_viewer.axes.tripcolor(unfolded_image[1],
+                                                     unfolded_image[2],
+                                                     unfolded_image[3],
+                                                     cmap='viridis')
             self.unfolded_data_viewer.draw()
-
 
     def get_flatfield(self, flat_img: numpy.ndarray):
         self.flatfield_image = flat_img
-
-

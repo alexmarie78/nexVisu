@@ -1,10 +1,10 @@
 from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QInputDialog
-from PyQt5.QtGui import QIcon
 
 from silx.gui.plot.StackView import StackView
 from silx.gui.plot.PlotActions import PlotAction
 from silx.gui.qt import QToolBar
+
 
 class DataViewer(StackView):
     def __init__(self, parent):
@@ -12,8 +12,12 @@ class DataViewer(StackView):
         self.createAction = False
         self.setYAxisInverted()
         self.setKeepDataAspectRatio()
+
         self.toolbar = QToolBar("Custom toolbar")
         self._plot.addToolBar(self.toolbar)
+        self.action_movie = None
+        self.action_pause = None
+        self.action_resume = None
 
     def set_movie(self, images):
         if self.createAction:
@@ -40,8 +44,8 @@ class DataViewer(StackView):
 
     def update_pause_button(self):
         if self.toolbar.actions()[-1] == self.action_pause:
-           self.toolbar.removeAction(self.action_pause)
-           self.toolbar.addAction(self.action_resume)
+            self.toolbar.removeAction(self.action_pause)
+            self.toolbar.addAction(self.action_resume)
         else:
             self.toolbar.removeAction(self.action_resume)
             self.toolbar.addAction(self.action_pause)
@@ -52,7 +56,7 @@ class DataViewerMovie(PlotAction):
     :param plot: :class:`.PlotWidget` instance on which to operate
     :param parent: See :class:`QAction`
     """
-    def __init__(self, plot, nbImages, parent=None):
+    def __init__(self, plot, nb_images, parent=None):
         PlotAction.__init__(self,
                             plot,
                             icon='camera',
@@ -60,24 +64,25 @@ class DataViewerMovie(PlotAction):
                             tooltip='Runs a movie of the stacked images',
                             triggered=self.ask_interval,
                             parent=parent)
-        self.nbImages = nbImages
+        self.nb_images = nb_images
         self.count = 0
+        self.data_timer = None
 
     def ask_interval(self) -> None:
-        inputInterval = QInputDialog().getDouble(self.parent(),
-                                                 "ms for the movie?",
-                                                 "milliseconds :",
-                                                 value=50.0,
-                                                 min=0.0001,
-                                                 max=5000,
-                                                 decimals=4)
-        if not inputInterval[0] is None:
-            self.dataTimer = QTimer(self, interval=inputInterval[0])
+        input_interval = QInputDialog().getDouble(self.parent(),
+                                                  "ms for the movie?",
+                                                  "milliseconds :",
+                                                  value=50.0,
+                                                  min=0.0001,
+                                                  max=5000,
+                                                  decimals=4)
+        if input_interval[0] is not None:
+            self.data_timer = QTimer(self, interval=input_interval[0])
             self.dataTimer.timeout.connect(self.data_viewer_movie)
             self.dataTimer.start()
 
     def data_viewer_movie(self) -> None:
-        if self.count < self.nbImages:
+        if self.count < self.nb_images:
             self.parent().setFrameNumber(self.count)
             self.count = self.count + 1
         else:
@@ -118,4 +123,4 @@ class ResumeMovie(PlotAction):
 
     def resume_movie(self) -> None:
         # Resume the movie of the stacked images movie
-        self.movie.dataTimer.start()
+        self.movie.data_timer.start()

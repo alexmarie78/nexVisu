@@ -1,7 +1,8 @@
-from h5py import Dataset, File
+from constants import DataPath, MetadataPath
+from h5py import File
 from PyQt5.QtWidgets import QMessageBox, QProgressBar, QApplication
 from scipy import ndimage
-from utils.nexusNavigation import get_dataset, DatasetPathWithAttribute, DatasetPathContains
+from utils.nexusNavigation import get_dataset
 
 import numpy
 import os
@@ -21,7 +22,7 @@ def gen_flatfield(first_scan: int, last_scan: int, path: str, progress: QProgres
         for i in range(last_scan - first_scan + 1):
             filename = scan_name + f"{i + first_scan}" + extension
             with File(os.path.join(directory_path, filename), mode='r') as h5file:
-                for data in get_dataset(h5file, DatasetPathWithAttribute("interpretation",b"image")):
+                for data in get_dataset(h5file, DataPath.IMAGE_INTERPRETATION):
                     flatfield += data
             # Segment the progress bar according to number of scan
             completed += 100/(last_scan - first_scan + 1)
@@ -245,6 +246,7 @@ def correct_and_unfold_data(flat_image: numpy.ndarray, images: numpy.ndarray, pa
 
 def get_angles(path: str) -> (numpy.ndarray, numpy.ndarray):
     with File(path, mode='r') as h5file:
+        for path in
         try:
             delta_array = numpy.zeros(get_dataset(h5file,
                                                   DatasetPathWithAttribute("label", b"Delta")).shape)
