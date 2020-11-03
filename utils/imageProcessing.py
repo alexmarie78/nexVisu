@@ -268,7 +268,8 @@ def correct_and_unfold_data(flat_image: numpy.ndarray, images: numpy.ndarray, pa
 def get_angles(path: str) -> (numpy.ndarray, numpy.ndarray):
     with File(path, mode='r') as h5file:
         # Collecting delta and gamma arrays
-        for delta_path, gamma_path in zip(DataPath.Delta, DataPath.Gamma):
+        delta_array, gamma_array = None
+        for delta_path, gamma_path in zip(DataPath.Delta.value, DataPath.Gamma.value):
             try:
                 if delta_array is None:
                     # We copy the data because we will use them after closing the file
