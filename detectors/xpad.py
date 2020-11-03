@@ -202,6 +202,10 @@ class DataContext(QWidget):
         self.upper_right_corner_layout.addWidget(self.flat_scan_viewer, 4, 0, -1, -1)
 
     def browse_file(self) -> None:
+        if hasattr(self, "scan"):
+            temp = self.scan
+        else:
+            temp = None
         cursor_position = QCursor.pos()
         directory = get_current_directory().replace("/utils", "").replace("/nexVisu", "")
         options = QFileDialog.Options()
@@ -216,12 +220,17 @@ visualize.', directory, '*.nxs', options=options)
                 self.scan_label.setText(self.scan.split('/')[-1])
                 self.scanLabelChanged.emit(self.scan)
             else:
-                self.scan_label.setText("Click on the button to search for the scan you want")
+                # If a scan was selected and the user kills the dialog
+                if temp is not None:
+                    self.scan = temp
+                    self.scan_label.setText(self.scan.split('/')[-1])
+                else:
+                    self.scan_label.setText("Click on the button to search for the scan you want")
         # Else it means user wants to chose a flatscan that will help reduce the noise in the experiment file
         else:
             self.flat_scan, _ = QFileDialog.getOpenFileName(self, "Choose the flatscan file you want to \
             compute.", directory, "*.nxs *.hdf5", options=options)
-            if not self.flat_scan == "":
+            if self.flat_scan != "":
                 self.flat_scan_viewer.clear()
                 self.flat_scan_input1.setText(self.flat_scan.split('/')[-1])
 
