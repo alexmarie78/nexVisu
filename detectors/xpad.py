@@ -41,7 +41,7 @@ class XpadContext(QWidget):
         self.tab2.layout.addWidget(self.xpad_visualisation)
 
         self.data_context.scanLabelChanged.connect(self.xpad_visualisation.set_data)
-        self.data_context.contextualDataEntered.connect(self.xpad_visualisation.unfold_raw_data)
+        self.data_context.contextualDataEntered.connect(self.xpad_visualisation.start_unfolding_raw_data)
         self.data_context.usingFlat.connect(self.send_flatfield_image)
         self.data_context.notUsingFlat.connect(self.send_empty_flatfield)
 
