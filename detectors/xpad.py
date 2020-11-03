@@ -221,7 +221,6 @@ visualize.', directory, '*.nxs', options=options)
         else:
             self.flat_scan, _ = QFileDialog.getOpenFileName(self, "Choose the flatscan file you want to \
             compute.", directory, "*.nxs *.hdf5", options=options)
-            print(self.flat_scan)
             if not self.flat_scan == "":
                 self.flat_scan_viewer.clear()
                 self.flat_scan_input1.setText(self.flat_scan.split('/')[-1])

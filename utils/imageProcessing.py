@@ -17,10 +17,10 @@ def gen_flatfield(first_scan: int, last_scan: int, path: str, progress: QProgres
     scan_name = os.path.basename(path).replace(extension, '').replace(str(first_scan), '').replace(str(last_scan), '')
     print(path)
     directory_path = os.path.dirname(path)
-    try:
-        completed = 0
-        progress.setVisible(True)
-        for i in range(last_scan - first_scan + 1):
+    completed = 0
+    progress.setVisible(True)
+    for i in range(last_scan - first_scan + 1):
+        try:
             filename = scan_name + f"{i + first_scan}" + extension
             with File(os.path.join(directory_path, filename), mode='r') as h5file:
                 for data in get_dataset(h5file, DataPath.IMAGE_INTERPRETATION.value):
@@ -31,13 +31,24 @@ def gen_flatfield(first_scan: int, last_scan: int, path: str, progress: QProgres
             progress.setValue(completed)
             # Update the gui and the progress bar
             application.processEvents()
-        return flatfield
-    except ValueError:
-        QMessageBox(QMessageBox.Icon.Critical, "Failed",
-                    "You are running a flatfield on a different detector shape").exec()
-    except OSError:
-        QMessageBox(QMessageBox.Icon.Critical, "Failed",
-                    f"You selected {filename} file which does not exist in the {directory_path} location").exec()
+        except ValueError:
+            QMessageBox(QMessageBox.Icon.Critical, "Failed",
+                        "You are running a flatfield on a different detector shape").exec()
+        except OSError:
+            if i > first_scan:
+                # We need to update the progress bar even if we skip a scan
+                completed += 100 / (last_scan - first_scan + 1)
+                progress.setValue(completed)
+                application.processEvents()
+                print(f"{filename} scan seems to not exist. It has been skipped in the flatfield computation")
+            else:
+                QMessageBox(QMessageBox.Icon.Critical, "Failed", f"You selected {filename} file which does not "
+                                                                 f"exist in the {directory_path} location").exec()
+    if 99.0 < completed < 100:
+        completed = 100.0
+        progress.setValue(completed)
+        application.processEvents()
+    return flatfield
 
 
 def correct_and_unfold_data(flat_image: numpy.ndarray, images: numpy.ndarray, path: str, contextual_data: dict) \
