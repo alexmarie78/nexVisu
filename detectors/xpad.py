@@ -203,12 +203,15 @@ class DataContext(QWidget):
 
     def browse_file(self) -> None:
         cursor_position = QCursor.pos()
-        directory = get_current_directory().replace("/utils", "")
+        directory = get_current_directory().replace("/utils", "").replace("/nexVisu", "")
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontResolveSymlinks
+        options |= QFileDialog.DontUseNativeDialog
         # Helps multiple uses of this function without rewriting it. If the cursor is in the left half-screen part,
         # user wants to chose an experiment file
         if cursor_position.x() <= self.application.desktop().screenGeometry().width()//2:
             self.scan, _ = QFileDialog.getOpenFileName(self, 'Choose the scan file you want to \
-visualize.', directory, '*.nxs')
+visualize.', directory, '*.nxs', options=options)
             if self.scan != "":
                 self.scan_label.setText(self.scan.split('/')[-1])
                 self.scanLabelChanged.emit(self.scan)
@@ -217,7 +220,7 @@ visualize.', directory, '*.nxs')
         # Else it means user wants to chose a flatscan that will help reduce the noise in the experiment file
         else:
             self.flat_scan, _ = QFileDialog.getOpenFileName(self, "Choose the flatscan file you want to \
-compute.", directory, "*.nxs *.hdf5")
+            compute.", directory, "*.nxs *.hdf5", options=options)
             print(self.flat_scan)
             if not self.flat_scan == "":
                 self.flat_scan_viewer.clear()
