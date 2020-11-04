@@ -16,7 +16,7 @@ class UnfoldedDataViewer(QWidget):
     def __init__(self, parent):
         super().__init__(parent=parent)
 
-        self.plot = ScatterView()
+        self.plot = ScatterView(self)
         colormap = Colormap('viridis', normalization='log')
         self.plot.setGraphTitle("Stack of unfolded data")
         self.plot.setColormap(colormap)
@@ -25,7 +25,7 @@ class UnfoldedDataViewer(QWidget):
         self.plot.getPlotWidget().setKeepDataAspectRatio(False)
         self.plot.getPlotWidget().setYAxisInverted(True)
 
-        self.selector = NumpyAxesSelector()
+        self.selector = NumpyAxesSelector(self)
         # Prevent user from changing dimensions for the plot
         self.selector.setNamedAxesSelectorVisibility(False)
         self.selector.setVisible(True)
@@ -42,23 +42,23 @@ class UnfoldedDataViewer(QWidget):
         self.selector.selectionChanged.connect(self.change_displayed_data)
 
     def add_scatter(self, scatter_image: tuple):
+        # Add an image to the stack. If it is the first, emit the selectionChanged signal to plot the first image
         self.stack.append(scatter_image)
         if self.initial_data_flag:
             self.selector.selectionChanged.emit()
             self.initial_data_flag = False
 
     def set_stack(self, nb_images: int):
+        # Set the size of the sliderbar that will let the user navigate the images
         self.clear_scatter_view()
         self.selector.setData(numpy.zeros((nb_images, 1, 1)))
 
     def change_displayed_data(self):
+        # If there is at least one unfolded image, clear the view, unpack the data and plot a scatter view of the image
         if len(self.stack) > 0:
-            start = time.time()
             self.clear_scatter_view()
-            x_array = self.stack[self.selector.selection()[0]][0]
-            y_array = self.stack[self.selector.selection()[0]][1]
-            intensity = self.stack[self.selector.selection()[0]][2]
-            # x_array, y_array, intensity = self.stack[self.selector.selection()[0]]
+            start = time.time()
+            x_array, y_array, intensity = self.stack[self.selector.selection()[0]]
             end = time.time()
             print("unpacking took :", (end-start)*1000.0)
             start = time.time()
