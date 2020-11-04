@@ -1,22 +1,12 @@
 from constants import DataPath
 from h5py import File
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT
-from matplotlib.figure import Figure
 from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout
 from PyQt5.QtCore import pyqtSlot, QTimer
-from utils.dataViewer import DataViewer
+from utils.dataViewers import RawDataViewer, UnfoldedDataViewer
 from utils.nexusNavigation import get_dataset
 from utils.imageProcessing import compute_geometry, correct_and_unfold_data, get_angles
 
 import numpy
-
-
-class UnfoldCanvas(FigureCanvasQTAgg):
-
-    def __init__(self, parent=None, width=5, height=4, dpi=100):
-        fig = Figure(figsize=(width, height), dpi=dpi)
-        self.axes = fig.add_subplot(111)
-        super(UnfoldCanvas, self).__init__(fig)
 
 
 class XpadVisualisation(QWidget):
@@ -50,14 +40,15 @@ class XpadVisualisation(QWidget):
 
         # Create first tab
         self.tab1.layout = QVBoxLayout(self.tab1)
-        self.raw_data_viewer = DataViewer(self)
+        self.raw_data_viewer = RawDataViewer(self)
         self.tab1.layout.addWidget(self.raw_data_viewer)
 
         # Create second tab
         self.tab2.layout = QVBoxLayout(self.tab2)
-        self.unfolded_data_viewer = UnfoldCanvas()
-        self.toolbar = NavigationToolbar2QT(self.unfolded_data_viewer, self)
-        self.tab2.layout.addWidget(self.toolbar)
+        self.unfolded_data_viewer = UnfoldedDataViewer(self)
+        # self.unfolded_data_viewer = UnfoldCanvas()
+        # self.toolbar = NavigationToolbar2QT(self.unfolded_data_viewer, self)
+        # self.tab2.layout.addWidget(self.toolbar)
         self.tab2.layout.addWidget(self.unfolded_data_viewer)
 
         self.unfolded_data_viewer.show()
@@ -77,11 +68,15 @@ class XpadVisualisation(QWidget):
         self.path = path
         with File(path, mode='r') as h5file:
             self.raw_data = get_dataset(h5file, DataPath.IMAGE_INTERPRETATION.value)[:]
+        # We put the raw data in the dataviewer
         self.raw_data_viewer.set_movie(self.raw_data)
+        # We allocate a number of view in the stack
+        self.unfolded_data_viewer.set_stack(self.raw_data.shape[0])
 
     def start_unfolding_raw_data(self, calibration: dict) -> None:
+        self.stop_flag = False
         # Clean the plot
-        self.unfolded_data_viewer.axes.cla()
+        # self.unfolded_data_viewer.axes.cla()
         # Create geometry of the detector
         self.geometry = compute_geometry(calibration, self.flatfield_image, self.raw_data)
         # Collect the angles
@@ -95,24 +90,20 @@ class XpadVisualisation(QWidget):
         self.unfold_timer.start()
 
     def unfold_data(self):
-        if not self.stop_flag:
-            try:
-                image = next(self.data_iterator)
-                index = next(self.index_iterator)
-                delta = self.delta_array[index] if len(self.delta_array) > 1 else self.delta_array[0]
-                gamma = self.gamma_array[index] if len(self.gamma_array) > 1 else self.gamma_array[0]
-                # Unfold raw data
-                unfolded_data = correct_and_unfold_data(self.geometry, image, delta, gamma)
-                # Plot them in stack
-                self.unfolded_data_viewer.axes.tripcolor(unfolded_data[0],
-                                                         unfolded_data[1],
-                                                         unfolded_data[2],
-                                                         cmap='viridis')
-                self.unfolded_data_viewer.draw()
-                print(f"Unfolded the image number {index} in {self.path} scan")
-                self.stop_flag = True
-            except StopIteration:
-                self.unfold_timer.stop()
+        try:
+            image = next(self.data_iterator)
+            index = next(self.index_iterator)
+            delta = self.delta_array[index] if len(self.delta_array) > 1 else self.delta_array[0]
+            gamma = self.gamma_array[index] if len(self.gamma_array) > 1 else self.gamma_array[0]
+            # Unfold raw data
+            unfolded_data = correct_and_unfold_data(self.geometry, image, delta, gamma)
+            # Plot them in stack
+
+            self.unfolded_data_viewer.add_scatter(unfolded_data)
+
+            print(f"Unfolded the image number {index} in {self.path} scan")
+        except StopIteration:
+            self.unfold_timer.stop()
 
     def get_flatfield(self, flat_img: numpy.ndarray):
         self.flatfield_image = flat_img

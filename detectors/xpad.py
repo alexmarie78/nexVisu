@@ -175,6 +175,10 @@ class DataContext(QWidget):
         self.flat_scan_viewer = Plot2D(self)
         self.flat_scan_viewer.setYAxisInverted()
         self.flat_scan_viewer.setKeepDataAspectRatio()
+        self.flat_scan_viewer.setGraphTitle("Flatfield, the result of the computation of several scan")
+        self.flat_scan_viewer.setGraphXLabel("x in pixels")
+        self.flat_scan_viewer.setGraphYLabel("y in pixels")
+        self.flat_scan_viewer.setDefaultColormap(self.colormap)
 
         self.flatfield_label = QLabel("Flatfield name : ")
         self.flatfield_output = QLineEdit()
@@ -251,8 +255,7 @@ visualize.', directory, '*.nxs', options=options)
                 self.result = gen_flatfield(first_scan, last_scan, self.flat_scan,
                                             self.flat_scan_progress, self.application)
                 self.flatfield_output.setText(f"flatfield_{first_scan}_{last_scan}")
-                self.flat_scan_viewer.addImage(self.result, colormap=self.colormap,
-                                               xlabel='X in pixels', ylabel='Y in pixels')
+                self.flat_scan_viewer.addImage(self.result)
                 # We emit the signal when the flatfield had been computed,
                 # preventing the app from crashing if the user already checked the box to use the flatfield.
                 self.usingFlat.emit()
