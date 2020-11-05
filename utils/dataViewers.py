@@ -17,14 +17,14 @@ class UnfoldedDataViewer(QWidget):
     def __init__(self, parent):
         super().__init__(parent=parent)
 
-        self.plot = ScatterView(self)
+        self.scatter_view = ScatterView(self)
         colormap = Colormap('viridis', normalization='log')
-        self.plot.setGraphTitle("Stack of unfolded data")
-        self.plot.setColormap(colormap)
-        self.plot.getPlotWidget().setGraphXLabel("two-th angle (theta)")
-        self.plot.getPlotWidget().setGraphYLabel("psi")
-        self.plot.getPlotWidget().setKeepDataAspectRatio(False)
-        self.plot.getPlotWidget().setYAxisInverted(True)
+        self.scatter_view.setGraphTitle("Stack of unfolded data")
+        self.scatter_view.setColormap(colormap)
+        self.scatter_view.getPlotWidget().setGraphXLabel("two-th angle (theta)")
+        self.scatter_view.getPlotWidget().setGraphYLabel("psi")
+        self.scatter_view.getPlotWidget().setKeepDataAspectRatio(False)
+        self.scatter_view.getPlotWidget().setYAxisInverted(True)
 
         self.selector = NumpyAxesSelector(self)
         # Prevent user from changing dimensions for the plot
@@ -33,7 +33,7 @@ class UnfoldedDataViewer(QWidget):
         self.selector.setAxisNames("12")
 
         self.layout = QVBoxLayout(self)
-        self.layout.addWidget(self.plot)
+        self.layout.addWidget(self.scatter_view)
         self.layout.addWidget(self.selector)
 
         self.stack = []
@@ -58,17 +58,16 @@ class UnfoldedDataViewer(QWidget):
         # If there is at least one unfolded image, clear the view, unpack the data and plot a scatter view of the image
         if len(self.stack) > 0:
             self.clear_scatter_view()
-            start = time.time()
             x_array, y_array, intensity = self.stack[self.selector.selection()[0]]
-            end = time.time()
-            print("unpacking took :", (end-start)*1000.0)
+            self.scatter_view.getPlotWidget().setGraphXLimits(min(x_array) - 0.0, max(x_array) + 0.0)
+            self.scatter_view.getPlotWidget().setGraphYLimits(min(y_array) - 5.0, max(y_array) + 5.0)
             start = time.time()
-            self.plot.setData(x_array, y_array, intensity)
+            self.scatter_view.setData(x_array, y_array, intensity, copy=False)
             end = time.time()
-            print("Setting the data took :", (end - start) * 1000.0)
+            print("Setting the data took :", (end - start) * 1000.0, " ms")
 
     def clear_scatter_view(self):
-        self.plot.setData(None, None, None)
+        self.scatter_view.setData(None, None, None)
 
 
 class RawDataViewer(StackView):
@@ -76,14 +75,10 @@ class RawDataViewer(StackView):
         super().__init__(parent=parent, aspectRatio=True, yinverted=True)
         self.setGraphTitle("Stack of raw data")
         self.setColormap("viridis", autoscale=True, normalization='log')
-        if silx_version >= '0.13.0':
-            self.getPlotWidget().setGraphXLabel("x in pixel")
-            self.getPlotWidget().setGraphYLabel("y in pixel")
-            self.getPlotWidget().setYAxisInverted(True)
-        else:
-            self.getPlot().setGraphXLabel("x in pixel")
-            self.getPlot().setGraphYLabel("y in pixel")
-            self.getPlot().setYAxisInverted(True)
+        self.plot = self.getPlotWidget() if silx_version >= '0.13.0' else self.getPlot()
+        self.plot.setGraphXLabel("x in pixel")
+        self.plot.setGraphYLabel("y in pixel")
+        self.plot.setYAxisInverted(True)
 
         self.action_already_created = False
 
@@ -93,25 +88,31 @@ class RawDataViewer(StackView):
         self.action_pause = None
         self.action_resume = None
 
+    def update_graph(self):
+        self.setGraphTitle("Stack of raw data")
+        self.setColormap("viridis", autoscale=True, normalization='log')
+        self.plot.setGraphXLabel("x in pixel")
+        self.plot.setGraphYLabel("y in pixel")
+        self.plot.setYAxisInverted(True)
+
     def set_movie(self, images):
-        if self.action_already_created:
-            self.toolbar.clear()
-        else:
-            self.action_already_created = True
-        self.action_movie = DataViewerMovie(self._plot, images.shape[0], parent=self)
-        self.action_pause = PauseMovie(self._plot, self.action_movie, parent=self)
-        self.action_resume = ResumeMovie(self._plot, self.action_movie, parent=self)
-        self.toolbar.addAction(self.action_movie)
-        self.toolbar.addAction(self.action_pause)
-        self.setStack(images)
-
-        self.action_pause.triggered.connect(self.update_pause_button)
-        self.action_resume.triggered.connect(self.update_pause_button)
-
-    def update_movie(self, images):
         if images is not None:
+            self.toolbar.clear()
+
+            self.action_movie = DataViewerMovie(self._plot, images.shape[0], parent=self)
+            self.action_pause = PauseMovie(self._plot, self.action_movie, parent=self)
+            self.action_resume = ResumeMovie(self._plot, self.action_movie, parent=self)
+
+            self.toolbar.addAction(self.action_movie)
+            self.toolbar.addAction(self.action_pause)
+
             self.setStack(images)
+            self.update_graph()
+
+            self.action_pause.triggered.connect(self.update_pause_button)
+            self.action_resume.triggered.connect(self.update_pause_button)
         else:
+            self.toolbar.clear()
             self.setStack(None)
 
     def update_pause_button(self):
@@ -149,16 +150,16 @@ class DataViewerMovie(PlotAction):
                                                   max=5000,
                                                   decimals=4)
         if input_interval[0] is not None:
-            self.data_timer = QTimer(self, interval=input_interval[0])
-            self.dataTimer.timeout.connect(self.data_viewer_movie)
-            self.dataTimer.start()
+            self.data_timer = QTimer(self, interval=input_interval[0]/1000.0)
+            self.data_timer.timeout.connect(self.data_viewer_movie)
+            self.data_timer.start()
 
     def data_viewer_movie(self) -> None:
         if self.count < self.nb_images:
             self.parent().setFrameNumber(self.count)
             self.count = self.count + 1
         else:
-            self.dataTimer.stop()
+            self.data_timer.stop()
             self.count = 0
 
 
@@ -179,7 +180,7 @@ class PauseMovie(PlotAction):
 
     def pause_movie(self) -> None:
         # Pauses the stacked images movie
-        self.movie.dataTimer.stop()
+        self.movie.data_timer.stop()
 
 
 class ResumeMovie(PlotAction):
