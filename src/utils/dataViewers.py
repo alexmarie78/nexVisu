@@ -22,8 +22,8 @@ class UnfoldedDataViewer(QWidget):
         self.scatter_view.setGraphTitle("Stack of unfolded data")
         self.scatter_view.setColormap(colormap)
         self.plot = self.scatter_view.getPlotWidget()
-        self.plot.setGraphXLabel("two-th angle (theta)")
-        self.plot.setGraphYLabel("psi")
+        self.plot.setGraphXLabel("two-theta (°)")
+        self.plot.setGraphYLabel("psi (°)")
         self.plot.setKeepDataAspectRatio(False)
         self.plot.setYAxisInverted(True)
 
@@ -80,7 +80,7 @@ class RawDataViewer(StackView):
     def __init__(self, parent):
         super().__init__(parent=parent, aspectRatio=True, yinverted=True)
         self.setColormap("viridis", autoscale=True, normalization='log')
-        self.setLabels(("images", "x in pixel", "y in pixel"))
+        self.setLabels(("images", "x (pixel)", "y (pixel)"))
         self.setTitleCallback(self.title)
         self.plot = self.getPlotWidget() if silx_version >= '0.13.0' else self.getPlot()
         self.plot.setYAxisInverted(True)

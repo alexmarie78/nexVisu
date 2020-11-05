@@ -8,7 +8,7 @@ class Detectors(Enum):
 
 class ScanTypes(Enum):
     ASCAN = "ascan"
-    TSCAN = "tscan"
+    TSCAN = "timescan"
     FSCAN = "fscan"
 
 

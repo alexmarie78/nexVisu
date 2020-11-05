@@ -109,23 +109,23 @@ class DataContext(QWidget):
         self.direct_beam_label.setFont(font)
         # direct_beam_label.setAlignment(Qt.AlignCenter)
 
-        self.x_label = QLabel("x in pixels : ")
+        self.x_label = QLabel("x (pixels) : ")
         self.x_input = QLineEdit()
         self.x_input.textChanged.connect(self.distance_computation)
 
-        self.y_label = QLabel("y in pixels : ")
+        self.y_label = QLabel("y (pixels) : ")
         self.y_input = QLineEdit()
         self.y_input.textChanged.connect(self.distance_computation)
 
-        self.delta_label = QLabel("delta offset in degree : ")
+        self.delta_label = QLabel("delta position (°) : ")
         self.delta_input = QLineEdit()
         self.delta_input.textChanged.connect(self.distance_computation)
 
-        self.gamma_label = QLabel("gamma offset in degree : ")
+        self.gamma_label = QLabel("gamma position (°) : ")
         self.gamma_input = QLineEdit()
         self.gamma_input.textChanged.connect(self.distance_computation)
 
-        self.distance_label = QLabel("number of pixel/degree : ")
+        self.distance_label = QLabel("number of pixel/° : ")
         self.distance_output = QLineEdit()
         self.distance_output.setReadOnly(True)
         self.distance_output.textChanged.connect(self.distance_computation)
@@ -178,8 +178,8 @@ class DataContext(QWidget):
         self.flat_scan_viewer.setYAxisInverted()
         self.flat_scan_viewer.setKeepDataAspectRatio()
         self.flat_scan_viewer.setGraphTitle("Flatfield, the result of the computation of several scan")
-        self.flat_scan_viewer.setGraphXLabel("x in pixels")
-        self.flat_scan_viewer.setGraphYLabel("y in pixels")
+        self.flat_scan_viewer.setGraphXLabel("x (pixels)")
+        self.flat_scan_viewer.setGraphYLabel("y (pixels)")
         self.flat_scan_viewer.setDefaultColormap(self.colormap)
 
         self.flatfield_label = QLabel("Flatfield name : ")
