@@ -49,7 +49,7 @@ class UnfoldedDataViewer(QWidget):
             self.selector.selectionChanged.emit()
             self.initial_data_flag = False
 
-    def set_stack(self, nb_images: int):
+    def set_stack_slider(self, nb_images: int):
         # Set the size of the sliderbar that will let the user navigate the images
         self.clear_scatter_view()
         self.selector.setData(numpy.zeros((nb_images, 1, 1)))
@@ -68,6 +68,11 @@ class UnfoldedDataViewer(QWidget):
 
     def clear_scatter_view(self):
         self.scatter_view.setData(None, None, None)
+
+    def reset_scatter_view(self):
+        self.clear_scatter_view()
+        self.stack = []
+        self.initial_data_flag = True
 
 
 class RawDataViewer(StackView):
