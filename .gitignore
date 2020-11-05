@@ -130,6 +130,8 @@ dmypy.json
 
 # Emacs temp files
 *~
+#*#
+*/#*#
 
 # Personal files
 TODO.txt
