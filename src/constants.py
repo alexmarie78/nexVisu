@@ -4,7 +4,6 @@ from utils.nexusNavigation import DatasetPathWithAttribute, DatasetPathContains
 
 class Detectors(Enum):
     XPAD = "XPAD"
-    CIRPAD = "CIRPAD"
 
 
 class ScanTypes(Enum):
