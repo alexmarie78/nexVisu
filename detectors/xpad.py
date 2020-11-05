@@ -1,15 +1,17 @@
-from constants import scan_types
+from constants import ScanTypes
 from detectors.xpadProcess import XpadVisualisation
-from PyQt5.QtWidgets import QPushButton, QWidget, QTabWidget, QVBoxLayout, QGridLayout, QGroupBox, QLineEdit, QLabel, QComboBox, QCheckBox, QFileDialog, QMessageBox, QDesktopWidget, QApplication, QProgressBar
-from PyQt5.QtCore import pyqtSlot, pyqtSignal, Qt
+from PyQt5.QtWidgets import QPushButton, QWidget, QTabWidget, QVBoxLayout, QGridLayout, QGroupBox, QLineEdit, QLabel, \
+    QComboBox, QCheckBox, QFileDialog, QMessageBox, QApplication, QProgressBar
+from PyQt5.QtCore import pyqtSlot, pyqtSignal
 from PyQt5.QtGui import QFont, QCursor
 from silx.gui.colors import Colormap
 from silx.gui.plot import Plot2D
-from utils.flatfield import gen_flatfield
+from utils.imageProcessing import gen_flatfield
+from utils.nexusNavigation import get_current_directory
 
 import numpy
 import os
-import sys
+
 
 class XpadContext(QWidget):
 
@@ -22,11 +24,11 @@ class XpadContext(QWidget):
         self.tabs = QTabWidget()
         self.tab1 = QWidget()
         self.tab2 = QWidget()
-        self.tabs.resize(400,300)
+        self.tabs.resize(400, 300)
 
         # Add tabs
-        self.tabs.addTab(self.tab1,"Initial Data")
-        self.tabs.addTab(self.tab2,"Visualisation and processing")
+        self.tabs.addTab(self.tab1, "Initial Data")
+        self.tabs.addTab(self.tab2, "Visualisation and processing")
 
         # Create first tab
         self.tab1.layout = QVBoxLayout(self.tab1)
@@ -39,8 +41,9 @@ class XpadContext(QWidget):
         self.tab2.layout.addWidget(self.xpad_visualisation)
 
         self.data_context.scanLabelChanged.connect(self.xpad_visualisation.set_data)
-        self.data_context.contextualDataEntered.connect(self.xpad_visualisation.unfold_raw_data)
+        self.data_context.contextualDataEntered.connect(self.xpad_visualisation.start_unfolding_raw_data)
         self.data_context.usingFlat.connect(self.send_flatfield_image)
+        self.data_context.notUsingFlat.connect(self.send_empty_flatfield)
 
         # Add tabs to widget
         self.layout.addWidget(self.tabs)
@@ -54,11 +57,16 @@ class XpadContext(QWidget):
     def send_flatfield_image(self) -> None:
         self.xpad_visualisation.get_flatfield(self.data_context.send_flatfield())
 
+    def send_empty_flatfield(self) -> None:
+        self.xpad_visualisation.get_flatfield(None)
+
+
 class DataContext(QWidget):
-    # Custom signal to transmit datas
+    # Custom signal to transmit data
     scanLabelChanged = pyqtSignal(str)
     contextualDataEntered = pyqtSignal(dict)
     usingFlat = pyqtSignal()
+    notUsingFlat = pyqtSignal()
 
     def __init__(self, application):
         super(QWidget, self).__init__()
@@ -92,9 +100,8 @@ class DataContext(QWidget):
         self.scan_type_label = QLabel("Scan type : ")
         self.scan_type_label.setFont(font)
         self.scan_type_input = QComboBox()
-        for scan in scan_types:
+        for scan in ScanTypes:
             self.scan_type_input.addItem(scan.value)
-
 
         self.direct_beam_label = QLabel("Direct Beam :")
         self.direct_beam_label.setFont(font)
@@ -168,6 +175,10 @@ class DataContext(QWidget):
         self.flat_scan_viewer = Plot2D(self)
         self.flat_scan_viewer.setYAxisInverted()
         self.flat_scan_viewer.setKeepDataAspectRatio()
+        self.flat_scan_viewer.setGraphTitle("Flatfield, the result of the computation of several scan")
+        self.flat_scan_viewer.setGraphXLabel("x in pixels")
+        self.flat_scan_viewer.setGraphYLabel("y in pixels")
+        self.flat_scan_viewer.setDefaultColormap(self.colormap)
 
         self.flatfield_label = QLabel("Flatfield name : ")
         self.flatfield_output = QLineEdit()
@@ -195,33 +206,42 @@ class DataContext(QWidget):
         self.upper_right_corner_layout.addWidget(self.flat_scan_viewer, 4, 0, -1, -1)
 
     def browse_file(self) -> None:
+        if hasattr(self, "scan"):
+            temp = self.scan
+        else:
+            temp = None
         cursor_position = QCursor.pos()
-        directory = self.get_current_directory()
-        # Helps multiple uses of this function without rewriting it. If the cursor is in the left half-screen part, user wants to chose an experiment file
+        directory = get_current_directory().replace("/utils", "").replace("/nexVisu", "")
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontResolveSymlinks
+        options |= QFileDialog.DontUseNativeDialog
+        # Helps multiple uses of this function without rewriting it. If the cursor is in the left half-screen part,
+        # user wants to chose an experiment file
         if cursor_position.x() <= self.application.desktop().screenGeometry().width()//2:
             self.scan, _ = QFileDialog.getOpenFileName(self, 'Choose the scan file you want to \
-visualize.', directory, '*.nxs')
+visualize.', directory, '*.nxs', options=options)
             if self.scan != "":
                 self.scan_label.setText(self.scan.split('/')[-1])
                 self.scanLabelChanged.emit(self.scan)
             else:
-                self.scan_label.setText("Click on the button to search for the scan you want")
+                # If a scan was selected and the user kills the dialog
+                if temp is not None:
+                    self.scan = temp
+                    self.scan_label.setText(self.scan.split('/')[-1])
+                else:
+                    self.scan_label.setText("Click on the button to search for the scan you want")
         # Else it means user wants to chose a flatscan that will help reduce the noise in the experiment file
         else:
-            self.flat_scan, _ = QFileDialog.getOpenFileName(self, 'Choose the flatscan file you want to \
-compute.', directory, '*.nxs *.hdf5')
-            if not self.flat_scan == "":
+            self.flat_scan, _ = QFileDialog.getOpenFileName(self, "Choose the flatscan file you want to \
+            compute.", directory, "*.nxs *.hdf5", options=options)
+            if self.flat_scan != "":
                 self.flat_scan_viewer.clear()
                 self.flat_scan_input1.setText(self.flat_scan.split('/')[-1])
 
-    def get_current_directory(self) -> str:
-        """return the path of the current directory,
-        aka where the script is running."""
-        return os.path.dirname(os.path.realpath(__file__))
-
     def generate_flatfield(self) -> None:
         if self.flat_scan_input1.text() == "" or self.flat_scan_input2.text() == "":
-            QMessageBox(QMessageBox.Icon.Critical,"Can't run a flat computation", "You must select at least two scans to perfom a flatfield").exec()
+            QMessageBox(QMessageBox.Icon.Critical, "Can't run a flat computation",
+                        "You must select at least two scans to perfom a flatfield").exec()
         else:
             if self.flat_scan_input1.text().split('_')[-1].split('.')[-2] == "0001":
                 first_scan = int(self.flat_scan_input1.text().split('_')[-2])
@@ -232,26 +252,31 @@ compute.', directory, '*.nxs *.hdf5')
                 first_scan, last_scan = last_scan, first_scan
             # Generate the flatfield file
             try:
-                self.result = gen_flatfield(first_scan, last_scan, self.flat_scan, self.flat_scan_progress, self.application)
+                self.result = gen_flatfield(first_scan, last_scan, self.flat_scan,
+                                            self.flat_scan_progress, self.application)
                 self.flatfield_output.setText(f"flatfield_{first_scan}_{last_scan}")
-                self.flat_scan_viewer.addImage(self.result, colormap=self.colormap, xlabel='X in pixels', ylabel='Y in pixels')
-                # We emit the signal when the flatfield had been computed, preventing the app from crashing if the user already checked the box to use the flatfield.
+                self.flat_scan_viewer.addImage(self.result)
+                # We emit the signal when the flatfield had been computed,
+                # preventing the app from crashing if the user already checked the box to use the flatfield.
                 self.usingFlat.emit()
             except TypeError:
-                QMessageBox(QMessageBox.Icon.Critical,"Can't run a flat computation", "You must select scans with xpad images.").exec()
+                QMessageBox(QMessageBox.Icon.Critical, "Can't run a flat computation",
+                            "You must select scans with xpad images.").exec()
                 self.flat_scan_input1.setText("")
                 self.flat_scan_input2.setText("")
 
     def save_flatfield(self) -> None:
         # If there is a flatfield calculated and it has not yet been saved.
         if hasattr(self, 'result') and not self.flat_saved:
-            directory = self.get_current_directory() + f"/{self.flatfield_output.text()}"
+            directory = get_current_directory().replace("/utils", "") + f"/{self.flatfield_output.text()}"
             path, _ = QFileDialog.getSaveFileName(self, 'Save File', directory)
             if path != "":
                 numpy.save(os.path.join(path), self.result, False)
                 self.flat_saved = True
         else:
-            QMessageBox(QMessageBox.Icon.Critical,"Can't save flatfield", "You must select or compute a flatfield scan before saving it. Or you might have already saved this flatfield").exec()
+            QMessageBox(QMessageBox.Icon.Critical, "Can't save flatfield",
+                        "You must select or compute a flatfield scan before saving it. "
+                        "Or you might have already saved this flatfield").exec()
 
     def distance_computation(self) -> None:
         try:
@@ -259,7 +284,7 @@ compute.', directory, '*.nxs *.hdf5')
             self.contextual_data["y"] = float(self.y_input.text())
             self.contextual_data["delta_offset"] = float(self.delta_input.text())
             self.contextual_data["gamma_offset"] = float(self.gamma_input.text())
-            self.distance_output.setText("76.78")
+            self.distance_output.setText("80.33")
             self.contextual_data["distance"] = float(self.distance_output.text())
             if not hasattr(self, "send_data_button"):
                 self.send_data_button = QPushButton("Send contextual data")
@@ -272,11 +297,14 @@ compute.', directory, '*.nxs *.hdf5')
         if hasattr(self, "scan") and self.scan != "":
             self.contextualDataEntered.emit(self.contextual_data)
         else:
-            QMessageBox(QMessageBox.Icon.Critical, "Can't send contextual data", "You must chose a scan file before sending the contextual data linked to it.").exec()
+            QMessageBox(QMessageBox.Icon.Critical, "Can't send contextual data",
+                        "You must chose a scan file before sending the contextual data linked to it.").exec()
 
     def use_flatfield(self) -> None:
         if self.flat_use_box.isChecked():
             self.usingFlat.emit()
+        else:
+            self.notUsingFlat.emit()
 
     def send_flatfield(self) -> numpy.ndarray:
         if self.flat_use_box.isChecked() and hasattr(self, "result"):
