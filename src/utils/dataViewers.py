@@ -21,10 +21,11 @@ class UnfoldedDataViewer(QWidget):
         colormap = Colormap('viridis', normalization='log')
         self.scatter_view.setGraphTitle("Stack of unfolded data")
         self.scatter_view.setColormap(colormap)
-        self.scatter_view.getPlotWidget().setGraphXLabel("two-th angle (theta)")
-        self.scatter_view.getPlotWidget().setGraphYLabel("psi")
-        self.scatter_view.getPlotWidget().setKeepDataAspectRatio(False)
-        self.scatter_view.getPlotWidget().setYAxisInverted(True)
+        self.plot = self.scatter_view.getPlotWidget()
+        self.plot.setGraphXLabel("two-th angle (theta)")
+        self.plot.setGraphYLabel("psi")
+        self.plot.setKeepDataAspectRatio(False)
+        self.plot.setYAxisInverted(True)
 
         self.selector = NumpyAxesSelector(self)
         # Prevent user from changing dimensions for the plot
@@ -59,8 +60,8 @@ class UnfoldedDataViewer(QWidget):
         if len(self.stack) > 0:
             self.clear_scatter_view()
             x_array, y_array, intensity = self.stack[self.selector.selection()[0]]
-            self.scatter_view.getPlotWidget().setGraphXLimits(min(x_array) - 0.0, max(x_array) + 0.0)
-            self.scatter_view.getPlotWidget().setGraphYLimits(min(y_array) - 5.0, max(y_array) + 5.0)
+            self.plot.setGraphXLimits(min(x_array) - 0.0, max(x_array) + 0.0)
+            self.plot.setGraphYLimits(min(y_array) - 5.0, max(y_array) + 5.0)
             start = time.time()
             self.scatter_view.setData(x_array, y_array, intensity, copy=False)
             end = time.time()
