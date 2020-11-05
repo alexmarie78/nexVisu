@@ -1,6 +1,7 @@
 from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QInputDialog, QWidget, QVBoxLayout
 
+from silx import version as silx_version
 from silx.gui.colors import Colormap
 from silx.gui.data.NumpyAxesSelector import NumpyAxesSelector
 from silx.gui.plot.ScatterView import ScatterView
@@ -75,9 +76,14 @@ class RawDataViewer(StackView):
         super().__init__(parent=parent, aspectRatio=True, yinverted=True)
         self.setGraphTitle("Stack of raw data")
         self.setColormap("viridis", autoscale=True, normalization='log')
-        self.getPlotWidget().setGraphXLabel("x in pixel")
-        self.getPlotWidget().setGraphYLabel("y in pixel")
-        self.getPlotWidget().setYAxisInverted(True)
+        if silx_version >= '0.13.0':
+            self.getPlotWidget().setGraphXLabel("x in pixel")
+            self.getPlotWidget().setGraphYLabel("y in pixel")
+            self.getPlotWidget().setYAxisInverted(True)
+        else:
+            self.getPlot().setGraphXLabel("x in pixel")
+            self.getPlot().setGraphYLabel("y in pixel")
+            self.getPlot().setYAxisInverted(True)
 
         self.action_already_created = False
 
