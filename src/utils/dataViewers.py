@@ -78,11 +78,10 @@ class UnfoldedDataViewer(QWidget):
 class RawDataViewer(StackView):
     def __init__(self, parent):
         super().__init__(parent=parent, aspectRatio=True, yinverted=True)
-        self.setGraphTitle("Stack of raw data")
         self.setColormap("viridis", autoscale=True, normalization='log')
+        self.setLabels(("images", "x in pixel", "y in pixel"))
+        self.setTitleCallback(self.title)
         self.plot = self.getPlotWidget() if silx_version >= '0.13.0' else self.getPlot()
-        self.plot.setGraphXLabel("x in pixel")
-        self.plot.setGraphYLabel("y in pixel")
         self.plot.setYAxisInverted(True)
 
         self.action_already_created = False
@@ -93,12 +92,8 @@ class RawDataViewer(StackView):
         self.action_pause = None
         self.action_resume = None
 
-    def update_graph(self):
-        self.setGraphTitle("Stack of raw data")
-        self.setColormap("viridis", autoscale=True, normalization='log')
-        self.plot.setGraphXLabel("x in pixel")
-        self.plot.setGraphYLabel("y in pixel")
-        self.plot.setYAxisInverted(True)
+    def title(self, image_index: int):
+        return f"Image number {image_index} of the stack"
 
     def set_movie(self, images):
         if images is not None:
@@ -112,7 +107,7 @@ class RawDataViewer(StackView):
             self.toolbar.addAction(self.action_pause)
 
             self.setStack(images)
-            self.update_graph()
+            self.setColormap("viridis", autoscale=True, normalization='log')
 
             self.action_pause.triggered.connect(self.update_pause_button)
             self.action_resume.triggered.connect(self.update_pause_button)
