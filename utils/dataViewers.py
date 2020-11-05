@@ -111,11 +111,6 @@ class RawDataViewer(StackView):
     def update_movie(self, images):
         if images is not None:
             self.setStack(images)
-            self.setGraphTitle("Stack of raw data")
-            self.setColormap("viridis", autoscale=True, normalization='log')
-            self.getPlotWidget().setGraphXLabel("x in pixel")
-            self.getPlotWidget().setGraphYLabel("y in pixel")
-            self.getPlotWidget().setYAxisInverted(True)
         else:
             self.setStack(None)
 

@@ -11,6 +11,8 @@ from utils.nexusNavigation import get_current_directory
 
 import numpy
 import os
+import platform
+import sys
 
 
 class XpadContext(QWidget):
@@ -214,7 +216,9 @@ class DataContext(QWidget):
         directory = get_current_directory().replace("/utils", "").replace("/nexVisu", "")
         options = QFileDialog.Options()
         options |= QFileDialog.DontResolveSymlinks
-        options |= QFileDialog.DontUseNativeDialog
+        if sys.platform.startswith('linux'):
+            if platform.linux_distribution()[0] == 'ubuntu':
+                options |= QFileDialog.DontUseNativeDialog
         # Helps multiple uses of this function without rewriting it. If the cursor is in the left half-screen part,
         # user wants to chose an experiment file
         if cursor_position.x() <= self.application.desktop().screenGeometry().width()//2:
