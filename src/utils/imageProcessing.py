@@ -69,6 +69,7 @@ def compute_geometry(contextual_data: dict, flat_image: numpy.ndarray, images: n
     number_of_chips = images.shape[2] // chip_size_x  # detector dimension, XPAD S-140
     distance = contextual_data["distance"] / numpy.tan(1.0 * deg2rad)
     lines_to_remove_array = [0, -3]
+    between_chips = [i * 80 + 3 * (i - 1) + 1  for i in range(1,7)]
 
     if flat_image is not None:
         factor_intensity_double_pixel = 1.0
@@ -85,8 +86,6 @@ def compute_geometry(contextual_data: dict, flat_image: numpy.ndarray, images: n
     # size of the resulting (corrected) image
     image_corr1_size_y = number_of_modules * chip_size_y - lines_to_remove
     image_corr1_size_x = (number_of_chips - 1) * 3 + number_of_chips * chip_size_x
-    print("size_y :", image_corr1_size_y)
-    print("size_x : ", image_corr1_size_x)
 
     new_x_array = numpy.zeros(image_corr1_size_x)
     new_x_ifactor_array = numpy.zeros(image_corr1_size_x)
@@ -94,11 +93,9 @@ def compute_geometry(contextual_data: dict, flat_image: numpy.ndarray, images: n
         new_x_array[x] = x
         new_x_ifactor_array[x] = 1  # no change in intensity
 
-    new_x_array[79] = 79
-    new_x_ifactor_array[79] = -1.0 / factor_intensity_double_pixel
-    new_x_array[80] = 79
-    new_x_ifactor_array[80] = -1.0 / factor_intensity_double_pixel
-    new_x_array[81] = 79
+    # Last two columns + doube pixel of first chip
+    new_x_array[79:82] = [79] * 3
+    new_x_ifactor_array[79:81] = [-1.0 / factor_intensity_double_pixel] * 2
     new_x_ifactor_array[81] = -10
 
     for indexChip in range(1, 6):
@@ -107,15 +104,14 @@ def compute_geometry(contextual_data: dict, flat_image: numpy.ndarray, images: n
             temp_index = temp_index0 + x
             new_x_array[temp_index] = x + 80 * indexChip
             new_x_ifactor_array[temp_index] = 1  # no change in intensity
-        new_x_array[temp_index0] = 80 * indexChip
-        new_x_ifactor_array[temp_index0] = -1.0 / factor_intensity_double_pixel  # 1st double column
-        new_x_array[temp_index0 - 1] = 80 * indexChip
-        new_x_ifactor_array[temp_index0 - 1] = -1.0 / factor_intensity_double_pixel
-        new_x_array[temp_index0 + 79] = 80 * indexChip + 79
-        new_x_ifactor_array[temp_index0 + 79] = -1.0 / factor_intensity_double_pixel  # last double column
-        new_x_array[temp_index0 + 80] = 80 * indexChip + 79
-        new_x_ifactor_array[temp_index0 + 80] = -1.0 / factor_intensity_double_pixel
-        new_x_array[temp_index0 + 81] = 80 * indexChip + 79
+
+        # First two columns of chip i
+        new_x_array[temp_index0 - 1 : temp_index0 + 1] = [80 * indexChip] * 2
+        new_x_ifactor_array[temp_index0 - 1 : temp_index0 + 1] = [-1.0 / factor_intensity_double_pixel] * 2
+
+        # Last two columns of chip i and double pixel
+        new_x_array[temp_index0 + 79 : temp_index0 + 82] = [80 * indexChip + 79] * 3
+        new_x_ifactor_array[temp_index0 + 79 : temp_index0 + 81] = [-1.0 / factor_intensity_double_pixel] * 2
         new_x_ifactor_array[temp_index0 + 81] = -10
 
     for x in range(6 * 80 + 1, 560):  # this is the last chip (image_index chip = 6)
@@ -123,10 +119,9 @@ def compute_geometry(contextual_data: dict, flat_image: numpy.ndarray, images: n
         new_x_array[temp_index] = x
         new_x_ifactor_array[temp_index] = 1  # no change in intensity
 
-    new_x_array[497] = 480
-    new_x_ifactor_array[497] = -1.0 / factor_intensity_double_pixel
-    new_x_array[498] = 480
-    new_x_ifactor_array[498] = -1.0 / factor_intensity_double_pixel
+    # First two columns of last chip
+    new_x_array[497:499] = [480] * 2
+    new_x_ifactor_array[497:499] = [-1.0 / factor_intensity_double_pixel] * 2
 
     new_y_array = numpy.zeros(image_corr1_size_y)  # correspondence oldY - newY
     new_y_array_module_id = numpy.zeros(image_corr1_size_y)  # will keep trace of module image_index
@@ -154,7 +149,8 @@ def compute_geometry(contextual_data: dict, flat_image: numpy.ndarray, images: n
         "new_y_array": new_y_array,
         "new_x_array": new_x_array,
         "new_x_ifactor_array": new_x_ifactor_array,
-        "flat_image_inv": flat_image_inv
+        "flat_image_inv": flat_image_inv,
+        "between_chips" : between_chips
     }
 
     return geometry
@@ -234,37 +230,21 @@ def correct_and_unfold_data(geometry: dict, image: numpy.ndarray, delta: float, 
         this_corrected_image[:, x] = this_image[new_y_array[:], new_x_array[x]]
         if -1 <= intensity_factor[x] < 0:
              this_corrected_image[:, x] = this_image[new_y_array[:], new_x_array[x]] / geometry["factor_intensity_double_pixel"]
-        #if intensity_factor[x] == -1:
-        #    this_corrected_image[:, x] = (this_image[new_y_array[:], new_x_array[x] - 1]
-        #                                  + this_image[new_y_array[:], new_x_array[x] + 1]) / 2.0 / geometry["factor_intensity_double_pixel"]
-    for x in range(0, geometry["image_corr1_size_x"]):
+    for x in geometry["between_chips"]:
         if intensity_factor[x] == -10:
+            # correct the double lines (last and 1st line of the modules, at their junction)
             this_corrected_image[:, x] = (this_corrected_image[:, x-1]
                                           + this_corrected_image[:, x+1]) / 2.0
-        # correct the double lines (last and 1st line of the modules, at their junction)
-    print("image : ", image[10][75:90])
-    print("this_image :", this_image[10][75:90])
-    print("this_corrected_image :", this_corrected_image[10][75:90])
 
     # last line of module1 = 119, is the 1st line to correct
     line_index1 = geometry["chip_size_y"] - 1
 
-    # 1st line of module2 (after adding the 3 empty lines), becomes the 5th line to correct
-    line_index5 = line_index1 + 3 + 1
-    line_index2 = line_index1 + 1
-    line_index3 = line_index1 + 2
-    line_index4 = line_index1 + 3
-
-    i1 = this_corrected_image[line_index1, :]
-    i1new = i1 / geometry["factor_intensity_double_pixel"]
-    i5 = this_corrected_image[line_index5, :]
-    i5new = i5 / geometry["factor_intensity_double_pixel"]
-    i3 = (i1new + i5new) / 2.0
-    this_corrected_image[line_index1, :] = i1new
-    this_corrected_image[line_index2, :] = i1new
-    this_corrected_image[line_index3, :] = i3
-    this_corrected_image[line_index5, :] = i5new
-    this_corrected_image[line_index4, :] = i5new
+    # Last two lines of the first module
+    this_corrected_image[line_index1 : line_index1 + 2, :] =  [this_corrected_image[line_index1, :] / geometry["factor_intensity_double_pixel"]] * 2
+    # Two first lines of the second module
+    this_corrected_image[line_index1 + 3 : line_index1 + 5, :] =  [this_corrected_image[line_index1 + 4, :] / geometry["factor_intensity_double_pixel"]] * 2
+    # Line between the two modules (0.5 + 0.5 pixels)
+    this_corrected_image[line_index1 + 2, :] = (this_corrected_image[line_index1, :] + this_corrected_image[line_index1 + 4, :]) / 2.0
 
     # IntensityArray = this_corrected_image.T.reshape(image_corr1_size_x * image_corr1_size_y)
     # this is the corrected intensity of each pixel, on the image having the new size
