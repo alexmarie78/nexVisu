@@ -3,8 +3,8 @@ from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QTabWidget, QVBo
 from PyQt5.QtCore import Qt
 
 from constants import Detectors
-from detectors import xpad, cirpad
-
+from detectors.xpad import xpad
+from detectors import cirpad
 import os
 
 class Window(QMainWindow):
@@ -54,7 +54,7 @@ class Window(QMainWindow):
 
     def init_detector_ui(self) -> QTabWidget or None:
         if self.selectionButton.currentText() == Detectors.XPAD.value:
-            return xpad.XpadContext(self.application)
+            return xpad.Xpad(self.application)
         if self.selectionButton.currentText() == Detectors.CIRPAD.value:
             return cirpad.CirpadContext()
 
