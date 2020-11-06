@@ -30,12 +30,14 @@ class XpadVisualisation(QWidget):
         self.tab1 = QWidget()
         self.tab2 = QWidget()
         self.tab3 = QWidget()
+        self.tab4 = QWidget()
         self.tabs.resize(400, 300)
 
         # Add tabs
         self.tabs.addTab(self.tab1, "Raw data")
         self.tabs.addTab(self.tab2, "Unfolded data")
-        self.tabs.addTab(self.tab3, "Fitted data")
+        self.tabs.addTab(self.tab3, "Diffraction diagramme")
+        self.tabs.addTab(self.tab4, "Fitted data")
 
         # Create first tab
         self.tab1.layout = QVBoxLayout(self.tab1)
@@ -100,7 +102,7 @@ class XpadVisualisation(QWidget):
             unfolded_data = correct_and_unfold_data(self.geometry, image, delta, gamma)
 
             # Add the unfolded image to the scatter stack of image.
-            self.unfolded_data_viewer.add_scatter(unfolded_data)
+            self.unfolded_data_viewer.add_scatter(unfolded_data, 10)
 
             print(f"Unfolded the image number {index} in {self.path} scan")
         except StopIteration:
