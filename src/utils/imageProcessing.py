@@ -62,9 +62,9 @@ def compute_geometry(contextual_data: dict, flat_image: numpy.ndarray, images: n
     # position of direct beam on xpad at (delltaOffset, gamOffset).
     # Use the 'corrected' positions (add 3 pixels whenever cross 120 in Y)
     y_center_detector = contextual_data["y"] + 3 * (contextual_data["y"] // chip_size_y)
-    delta_offset = contextual_data["delta_offset"]
+    delta_position = contextual_data["delta_position"] * -1.0 # Let the user input the real (negative value) of the delta position of the detector with direct beam
     # positions in diffracto angles for which the above values XcenDetector, YcenDetectors are reported
-    gamma_offset = contextual_data["gamma_offset"]
+    gamma_position = contextual_data["gamma_position"] * -1.0
     number_of_modules = images.shape[1] // chip_size_y
     number_of_chips = images.shape[2] // chip_size_x  # detector dimension, XPAD S-140
     distance = contextual_data["distance"] / numpy.tan(1.0 * deg2rad)
@@ -74,17 +74,19 @@ def compute_geometry(contextual_data: dict, flat_image: numpy.ndarray, images: n
         factor_intensity_double_pixel = 1.0
         flat_image = 1.0 * flat_image / flat_image.mean()
         flat_image_inv = 1.0 / flat_image
-        flat_image_inv[numpy.isnan(flat_image_inv)] = -10000000
-        flat_image_inv[numpy.isinf(flat_image_inv)] = -10000000
+        # flat_image_inv[numpy.isnan(flat_image_inv)] = -10000000
+        # flat_image_inv[numpy.isinf(flat_image_inv)] = -10000000
     else:
-        flat_image_inv = numpy.ones_like(images[0])
-        factor_intensity_double_pixel = 2.5
+        flat_image_inv = numpy.ones_like(images[0], dtype=numpy.float32)
+        factor_intensity_double_pixel = 2.3
 
     lines_to_remove = -3
 
     # size of the resulting (corrected) image
     image_corr1_size_y = number_of_modules * chip_size_y - lines_to_remove
     image_corr1_size_x = (number_of_chips - 1) * 3 + number_of_chips * chip_size_x
+    print("size_y :", image_corr1_size_y)
+    print("size_x : ", image_corr1_size_x)
 
     new_x_array = numpy.zeros(image_corr1_size_x)
     new_x_ifactor_array = numpy.zeros(image_corr1_size_x)
@@ -93,11 +95,11 @@ def compute_geometry(contextual_data: dict, flat_image: numpy.ndarray, images: n
         new_x_ifactor_array[x] = 1  # no change in intensity
 
     new_x_array[79] = 79
-    new_x_ifactor_array[79] = 1 / factor_intensity_double_pixel
+    new_x_ifactor_array[79] = -1.0 / factor_intensity_double_pixel
     new_x_array[80] = 79
-    new_x_ifactor_array[80] = 1 / factor_intensity_double_pixel
+    new_x_ifactor_array[80] = -1.0 / factor_intensity_double_pixel
     new_x_array[81] = 79
-    new_x_ifactor_array[81] = -1
+    new_x_ifactor_array[81] = -10
 
     for indexChip in range(1, 6):
         temp_index0 = indexChip * 83
@@ -106,15 +108,15 @@ def compute_geometry(contextual_data: dict, flat_image: numpy.ndarray, images: n
             new_x_array[temp_index] = x + 80 * indexChip
             new_x_ifactor_array[temp_index] = 1  # no change in intensity
         new_x_array[temp_index0] = 80 * indexChip
-        new_x_ifactor_array[temp_index0] = 1 / factor_intensity_double_pixel  # 1st double column
+        new_x_ifactor_array[temp_index0] = -1.0 / factor_intensity_double_pixel  # 1st double column
         new_x_array[temp_index0 - 1] = 80 * indexChip
-        new_x_ifactor_array[temp_index0 - 1] = 1 / factor_intensity_double_pixel
+        new_x_ifactor_array[temp_index0 - 1] = -1.0 / factor_intensity_double_pixel
         new_x_array[temp_index0 + 79] = 80 * indexChip + 79
-        new_x_ifactor_array[temp_index0 + 79] = 1 / factor_intensity_double_pixel  # last double column
+        new_x_ifactor_array[temp_index0 + 79] = -1.0 / factor_intensity_double_pixel  # last double column
         new_x_array[temp_index0 + 80] = 80 * indexChip + 79
-        new_x_ifactor_array[temp_index0 + 80] = 1 / factor_intensity_double_pixel
+        new_x_ifactor_array[temp_index0 + 80] = -1.0 / factor_intensity_double_pixel
         new_x_array[temp_index0 + 81] = 80 * indexChip + 79
-        new_x_ifactor_array[temp_index0 + 81] = -1
+        new_x_ifactor_array[temp_index0 + 81] = -10
 
     for x in range(6 * 80 + 1, 560):  # this is the last chip (image_index chip = 6)
         temp_index = 18 + x
@@ -122,9 +124,9 @@ def compute_geometry(contextual_data: dict, flat_image: numpy.ndarray, images: n
         new_x_ifactor_array[temp_index] = 1  # no change in intensity
 
     new_x_array[497] = 480
-    new_x_ifactor_array[497] = 1 / factor_intensity_double_pixel
+    new_x_ifactor_array[497] = -1.0 / factor_intensity_double_pixel
     new_x_array[498] = 480
-    new_x_ifactor_array[498] = 1 / factor_intensity_double_pixel
+    new_x_ifactor_array[498] = -1.0 / factor_intensity_double_pixel
 
     new_y_array = numpy.zeros(image_corr1_size_y)  # correspondence oldY - newY
     new_y_array_module_id = numpy.zeros(image_corr1_size_y)  # will keep trace of module image_index
@@ -144,8 +146,8 @@ def compute_geometry(contextual_data: dict, flat_image: numpy.ndarray, images: n
         "x_center_detector": x_center_detector,
         "y_center_detector": y_center_detector,
         "chip_size_y": chip_size_y,
-        "delta_offset": delta_offset,
-        "gamma_offset": gamma_offset,
+        "delta_position": delta_position,
+        "gamma_position": gamma_position,
         "image_corr1_size_x": image_corr1_size_x,
         "image_corr1_size_y": image_corr1_size_y,
         "factor_intensity_double_pixel": factor_intensity_double_pixel,
@@ -162,10 +164,10 @@ def correct_and_unfold_data(geometry: dict, image: numpy.ndarray, delta: float, 
     # extracting the XY coordinates for the rest of the scan transformation
     # ========psiAve = 1, deltaPsi = 1=============================================
 
-    diffracto_delta_rad = (delta + geometry["delta_offset"]) * geometry["deg2rad"]
+    diffracto_delta_rad = (delta + geometry["delta_position"]) * geometry["deg2rad"]
     sindelta = numpy.sin(diffracto_delta_rad)
     cosdelta = numpy.cos(diffracto_delta_rad)
-    diffracto_gam_rad = (gamma + geometry["gamma_offset"]) * geometry["deg2rad"]
+    diffracto_gam_rad = (gamma + geometry["gamma_position"]) * geometry["deg2rad"]
     singamma = numpy.sin(diffracto_gam_rad)
     cosgamma = numpy.cos(diffracto_gam_rad)
 
@@ -221,7 +223,7 @@ def correct_and_unfold_data(geometry: dict, image: numpy.ndarray, delta: float, 
 
     # dealing now with the intensitiespointIndex
     this_image = geometry["flat_image_inv"] * image
-    this_image = ndimage.median_filter(this_image, 3)
+    # this_image = ndimage.median_filter(this_image, size=3)
 
     this_corrected_image = numpy.zeros((geometry["image_corr1_size_y"], geometry["image_corr1_size_x"]))
     intensity_factor = geometry["new_x_ifactor_array"]  # x
@@ -230,13 +232,19 @@ def correct_and_unfold_data(geometry: dict, image: numpy.ndarray, delta: float, 
 
     for x in range(0, geometry["image_corr1_size_x"]):
         this_corrected_image[:, x] = this_image[new_y_array[:], new_x_array[x]]
-        if intensity_factor[x] < 0:
-            this_corrected_image[:, x] = (this_image[new_y_array[:], new_x_array[x] - 1]
-                                          + this_image[new_y_array[:], new_x_array[x] + 1]) \
-                                         / geometry["factor_intensity_double_pixel"]
-            this_corrected_image[numpy.isnan(this_corrected_image)] = -100000
-
-    # correct the double lines (last and 1st line of the modules, at their junction)
+        if -1 <= intensity_factor[x] < 0:
+             this_corrected_image[:, x] = this_image[new_y_array[:], new_x_array[x]] / geometry["factor_intensity_double_pixel"]
+        #if intensity_factor[x] == -1:
+        #    this_corrected_image[:, x] = (this_image[new_y_array[:], new_x_array[x] - 1]
+        #                                  + this_image[new_y_array[:], new_x_array[x] + 1]) / 2.0 / geometry["factor_intensity_double_pixel"]
+    for x in range(0, geometry["image_corr1_size_x"]):
+        if intensity_factor[x] == -10:
+            this_corrected_image[:, x] = (this_corrected_image[:, x-1]
+                                          + this_corrected_image[:, x+1]) / 2.0
+        # correct the double lines (last and 1st line of the modules, at their junction)
+    print("image : ", image[10][75:90])
+    print("this_image :", this_image[10][75:90])
+    print("this_corrected_image :", this_corrected_image[10][75:90])
 
     # last line of module1 = 119, is the 1st line to correct
     line_index1 = geometry["chip_size_y"] - 1
