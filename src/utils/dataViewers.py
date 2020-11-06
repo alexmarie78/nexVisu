@@ -79,7 +79,7 @@ class UnfoldedDataViewer(QWidget):
 
 class RawDataViewer(StackView):
     def __init__(self, parent):
-        super().__init__(parent=parent, aspectRatio=True, yinverted=True)
+        super().__init__(parent=parent, aspectRatio=True, yinverted=True, position=True)
         self.setColormap("viridis", autoscale=True, normalization='log')
         self.setLabels(("images", "x (pixel)", "y (pixel)"))
         self.setTitleCallback(self.title)
