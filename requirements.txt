@@ -1,0 +1,6 @@
+numpy~=1.19.0
+PyQt5~=5.15.0
+silx~=0.13.0
+h5py~=2.10.0
+scipy~=1.5.0
+setuptools~=47.3.1
