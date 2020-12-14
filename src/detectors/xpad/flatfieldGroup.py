@@ -1,13 +1,18 @@
-from PyQt5.QtWidgets import QLabel, QPushButton, QGridLayout, QGroupBox, QLineEdit, QComboBox, QMessageBox, QProgressBar, QCheckBox
+from PyQt5.QtWidgets import QLabel, QPushButton, QGridLayout, QGroupBox, QLineEdit, QMessageBox, QProgressBar, QCheckBox, QFileDialog
 from PyQt5.QtCore import pyqtSignal
 
 from silx.gui.colors import Colormap
 from silx.gui.plot import Plot2D
+from silx.io.nxdata import save_NXdata
+from h5py import File
 
-from utils.imageProcessing import gen_flatfield
-from utils.nexusNavigation import get_current_directory
+from src.utils.imageProcessing import gen_flatfield
+from src.utils.nexusNavigation import get_current_directory, get_dataset
+from src.constants import get_dialog_options, DataPath
 
 import numpy
+import os
+
 
 class FlatfieldGroup(QGroupBox):
     usingFlat = pyqtSignal()
@@ -25,6 +30,9 @@ class FlatfieldGroup(QGroupBox):
         self.init_UI()
 
     def init_UI(self):
+
+        self.load_flatfield_button = QPushButton("Load already existing flatfield")
+        self.load_flatfield_button.clicked.connect(self.load_flatfield)
 
         self.flat_scan_label1 = QLabel("Initial flat scan : ")
         self.flat_scan_input1 = QLineEdit()
@@ -64,6 +72,7 @@ class FlatfieldGroup(QGroupBox):
         self.grid_layout.addWidget(self.flat_scan_label1, 0, 0)
         self.grid_layout.addWidget(self.flat_scan_input1, 0, 1)
         self.grid_layout.addWidget(self.flat_scan_button1, 0, 2)
+        self.grid_layout.addWidget(self.load_flatfield_button, 0, 3)
         self.grid_layout.addWidget(self.flat_scan_label2, 1, 0)
         self.grid_layout.addWidget(self.flat_scan_input2, 1, 1)
         self.grid_layout.addWidget(self.flat_scan_run, 1, 2)
@@ -113,10 +122,17 @@ class FlatfieldGroup(QGroupBox):
     def save_flatfield(self) -> None:
         # If there is a flatfield calculated and it has not yet been saved.
         if hasattr(self, 'result') and not self.flat_saved:
-            directory = get_current_directory().replace("/utils", "") + f"/{self.flatfield_output.text()}"
-            path, _ = QFileDialog.getSaveFileName(self, 'Save File', directory)
+            directory = get_current_directory().replace("nexVisu/src/utils", "") + f"/{self.flatfield_output.text()}.nxs"
+            path, _ = QFileDialog.getSaveFileName(self, 'Save File', directory, options=get_dialog_options())
             if path != "":
-                numpy.save(os.path.join(path), self.result, False)
+                save_NXdata(filename=os.path.join(path),
+                            signal=numpy.asarray(self.result),
+                            signal_name="data",
+                            interpretation="image",
+                            nxentry_name="flatfield_scan",
+                            nxdata_name="generated_data"
+                            )
+                print(f"Saved flatfield into {os.path.join(path)} location.")
                 self.flat_saved = True
         else:
             QMessageBox(QMessageBox.Icon.Critical, "Can't save flatfield",
@@ -126,3 +142,17 @@ class FlatfieldGroup(QGroupBox):
     def send_flatfield(self) -> numpy.ndarray:
         if self.flat_use_box.isChecked() and hasattr(self, "result"):
             return self.result
+
+    def load_flatfield(self):
+        if hasattr(self, 'result'):
+            temp = self.result
+        directory = get_current_directory().replace("nexVisu/src/utils", "")
+        path, _ = QFileDialog.getOpenFileName(self, 'Select the flatfield file you want.',
+                                              directory, options=get_dialog_options())
+        if path == "":
+            self.result = temp
+        else:
+            with File(path, mode='r') as h5file:
+                self.result = get_dataset(h5file, DataPath.IMAGE_INTERPRETATION.value)
+            self.flat_scan_viewer.addImage(self.result)
+            self.usingFlat.emit()
