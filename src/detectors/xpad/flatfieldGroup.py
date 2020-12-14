@@ -152,7 +152,9 @@ class FlatfieldGroup(QGroupBox):
         if path == "":
             self.result = temp
         else:
+            data = numpy.zeros((240, 560))
             with File(path, mode='r') as h5file:
-                self.result = get_dataset(h5file, DataPath.IMAGE_INTERPRETATION.value)
+                data += get_dataset(h5file, DataPath.SAVED_IMAGE.value)
+            self.result = data
             self.flat_scan_viewer.addImage(self.result)
             self.usingFlat.emit()

@@ -38,6 +38,7 @@ class MetadataPath(Enum):
 
 class DataPath(Enum):
     IMAGE_INTERPRETATION = DatasetPathWithAttribute("interpretation", b"image")
+    SAVED_IMAGE = DatasetPathContains('/data')
 
     class Delta(Enum):
         DELTA_INTERPRETATION = DatasetPathWithAttribute("interpretation", b"Delta")
