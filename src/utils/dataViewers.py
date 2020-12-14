@@ -27,40 +27,41 @@ class UnfoldedDataViewer(QWidget):
         self.plot.setKeepDataAspectRatio(False)
         self.plot.setYAxisInverted(True)
 
-        self.selector = NumpyAxesSelector(self)
+        self.scatter_selector = NumpyAxesSelector(self)
         # Prevent user from changing dimensions for the plot
-        self.selector.setNamedAxesSelectorVisibility(False)
-        self.selector.setVisible(True)
-        self.selector.setAxisNames("12")
+        self.scatter_selector.setNamedAxesSelectorVisibility(False)
+        self.scatter_selector.setVisible(True)
+        self.scatter_selector.setAxisNames("12")
 
         self.layout = QVBoxLayout(self)
         self.layout.addWidget(self.scatter_view)
-        self.layout.addWidget(self.selector)
+        self.layout.addWidget(self.scatter_selector)
 
         self.stack = []
 
         self.initial_data_flag = True
 
-        self.selector.selectionChanged.connect(self.change_displayed_data)
+        self.scatter_selector.selectionChanged.connect(self.change_displayed_data)
 
     def add_scatter(self, scatter_image: tuple, scatter_factor: int):
         # Add an image to the stack. If it is the first, emit the selectionChanged signal to plot the first image
+        if scatter_factor <= 0:
+            scatter_factor = 1
         self.stack.append((scatter_image[0][::scatter_factor], scatter_image[1][::scatter_factor], scatter_image[2][::scatter_factor]))
-        # self.stack.append(scatter_image)
         if self.initial_data_flag:
-            self.selector.selectionChanged.emit()
+            self.scatter_selector.selectionChanged.emit()
             self.initial_data_flag = False
 
     def set_stack_slider(self, nb_images: int):
         # Set the size of the sliderbar that will let the user navigate the images
         self.clear_scatter_view()
-        self.selector.setData(numpy.zeros((nb_images, 1, 1)))
+        self.scatter_selector.setData(numpy.zeros((nb_images, 1, 1)))
 
     def change_displayed_data(self):
         # If there is at least one unfolded image, clear the view, unpack the data and plot a scatter view of the image
         if len(self.stack) > 0:
             self.clear_scatter_view()
-            x_array, y_array, intensity = self.stack[self.selector.selection()[0]]
+            x_array, y_array, intensity = self.stack[self.scatter_selector.selection()[0]]
             self.plot.setGraphXLimits(min(x_array) - 0.0, max(x_array) + 0.0)
             self.plot.setGraphYLimits(min(y_array) - 5.0, max(y_array) + 5.0)
             start = time.time()

@@ -1,8 +1,7 @@
-from constants import DataPath, MetadataPath
+from src.constants import DataPath, MetadataPath
 from h5py import File
 from PyQt5.QtWidgets import QMessageBox, QProgressBar, QApplication
-from scipy import ndimage
-from utils.nexusNavigation import get_dataset
+from src.utils.nexusNavigation import get_dataset
 
 import numpy
 import os
@@ -15,7 +14,6 @@ def gen_flatfield(first_scan: int, last_scan: int, path: str, progress: QProgres
     else:
         extension = ".nxs"
     scan_name = os.path.basename(path).replace(extension, '').replace(str(first_scan), '').replace(str(last_scan), '')
-    print(path)
     directory_path = os.path.dirname(path)
     completed = 0
     progress.setVisible(True)
