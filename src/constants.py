@@ -1,5 +1,5 @@
 from enum import Enum
-from utils.nexusNavigation import DatasetPathWithAttribute, DatasetPathContains
+from src.utils.nexusNavigation import DatasetPathWithAttribute, DatasetPathContains
 from PyQt5.QtWidgets import QFileDialog
 
 import sys
