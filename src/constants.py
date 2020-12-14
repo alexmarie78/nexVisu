@@ -1,5 +1,9 @@
 from enum import Enum
 from utils.nexusNavigation import DatasetPathWithAttribute, DatasetPathContains
+from PyQt5.QtWidgets import QFileDialog
+
+import sys
+import distro
 
 
 class Detectors(Enum):
@@ -44,3 +48,12 @@ class DataPath(Enum):
         GAMMA_INTERPRETATION = DatasetPathWithAttribute("interpretation", b"Gamma")
         GAMMA_LONG_NAME = DatasetPathWithAttribute("long_name", b"d13-1-cx1/ex/dif.1-gamma/position")
         GAMMA_LONG_NAME_BAD = DatasetPathWithAttribute("long_name", b"d13-1-cx1/ex/diff.1-gamma/position")
+
+
+def get_dialog_options() -> QFileDialog.Options:
+    options = QFileDialog.Options()
+    options |= QFileDialog.DontResolveSymlinks
+    if sys.platform.startswith('linux'):
+        if distro.linux_distribution()[0] == 'Ubuntu':
+            options |= QFileDialog.DontUseNativeDialog
+    return options

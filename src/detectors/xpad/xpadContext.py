@@ -1,12 +1,9 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QFileDialog
-from PyQt5.QtGui import QCursor
 
-from utils.nexusNavigation import get_current_directory
-from .contextualDataGroup import ContextualDataGroup
-from .flatfieldGroup import FlatfieldGroup
-
-import sys
-import platform
+from src.utils.nexusNavigation import get_current_directory
+from src.detectors.xpad.contextualDataGroup import ContextualDataGroup
+from src.detectors.xpad.flatfieldGroup import FlatfieldGroup
+from src.constants import get_dialog_options
 
 
 class DataContext(QWidget):
@@ -34,16 +31,10 @@ class DataContext(QWidget):
             temp = self.scan
         else:
             temp = None
-        cursor_position = QCursor.pos()
         directory = get_current_directory().replace("/utils", "").replace("/nexVisu", "")
-        options = QFileDialog.Options()
-        options |= QFileDialog.DontResolveSymlinks
-        if sys.platform.startswith('linux'):
-            if platform.linux_distribution()[0] == 'ubuntu':
-                options |= QFileDialog.DontUseNativeDialog
         if self.tabs.currentIndex() == 0:
             self.scan, _ = QFileDialog.getOpenFileName(self, 'Choose the scan file you want to \
-visualize.', directory, '*.nxs', options=options)
+visualize.', directory, '*.nxs', options=get_dialog_options())
             if self.scan != "":
                 self.experimental_data_tab.scan_label.setText(self.scan.split('/')[-1])
                 self.experimental_data_tab.scanLabelChanged.emit(self.scan)
@@ -56,7 +47,8 @@ visualize.', directory, '*.nxs', options=options)
                     self.experimental_data_tab.scan_label.setText("Click on the button to search for the scan you want")
         # Else it means user wants to chose a flatscan that will help reduce the noise in the experiment file
         else:
-            self.flat_scan, _ = QFileDialog.getOpenFileName(self, "Choose the flatscan file you want to compute.", directory, "*.nxs *.hdf5", options=options)
+            self.flat_scan, _ = QFileDialog.getOpenFileName(self, "Choose the flatscan file you want to compute.",
+                                                            directory, "*.nxs *.hdf5", options=get_dialog_options())
             if self.flat_scan != "":
                 self.flatfield_tab.flat_scan_viewer.clear()
                 self.flatfield_tab.flat_scan_input1.setText(self.flat_scan.split('/')[-1])

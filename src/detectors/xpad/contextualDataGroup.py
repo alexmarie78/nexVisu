@@ -2,7 +2,8 @@ from PyQt5.QtWidgets import QLabel, QPushButton, QGridLayout, QGroupBox, QLineEd
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import pyqtSignal
 
-from constants import ScanTypes
+from src.constants import ScanTypes
+
 
 class ContextualDataGroup(QGroupBox):
     scanLabelChanged = pyqtSignal(str)
