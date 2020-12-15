@@ -1,11 +1,12 @@
-from src.constants import DataPath
 from h5py import File
 from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QInputDialog, QLineEdit, QMessageBox
 from PyQt5.QtCore import pyqtSlot, QTimer
+from silx.gui.plot import Plot1D
 
+from src.constants import DataPath
 from src.utils.dataViewers import RawDataViewer, UnfoldedDataViewer
-from src.utils.nexusNavigation import get_dataset
 from src.utils.imageProcessing import compute_geometry, correct_and_unfold_data, get_angles
+from src.utils.nexusNavigation import get_dataset
 
 import numpy
 import os
@@ -26,32 +27,42 @@ class XpadVisualisation(QWidget):
         self.delta_array = None
         self.geometry = None
         self.is_unfolding = False
+        self.diagram = []
+        self.angles = []
+        self.init_UI()
+
+    def init_UI(self):
 
         # Initialize tab screen
         self.tabs = QTabWidget()
-        self.tab1 = QWidget()
-        self.tab2 = QWidget()
-        self.tab3 = QWidget()
-        self.tab4 = QWidget()
+        self.raw_data_tab = QWidget()
+        self.unfolded_data_tab = QWidget()
+        self.diagram_tab = QWidget()
+        self.fitted_data_tab = QWidget()
         self.tabs.resize(400, 300)
 
         # Add tabs
-        self.tabs.addTab(self.tab1, "Raw data")
-        self.tabs.addTab(self.tab2, "Unfolded data")
-        self.tabs.addTab(self.tab3, "Diffraction diagramme")
-        self.tabs.addTab(self.tab4, "Fitted data")
+        self.tabs.addTab(self.raw_data_tab, "Raw data")
+        self.tabs.addTab(self.unfolded_data_tab, "Unfolded data")
+        self.tabs.addTab(self.diagram_tab, "Diffraction diagram")
+        self.tabs.addTab(self.fitted_data_tab, "Fitted data")
 
-        # Create first tab
-        self.tab1.layout = QVBoxLayout(self.tab1)
+        # Create raw data display tab
+        self.raw_data_tab.layout = QVBoxLayout(self.raw_data_tab)
         self.raw_data_viewer = RawDataViewer(self)
-        self.tab1.layout.addWidget(self.raw_data_viewer)
+        self.raw_data_tab.layout.addWidget(self.raw_data_viewer)
 
-        # Create second tab
-        self.tab2.layout = QVBoxLayout(self.tab2)
+        # Create unfolded and corrected data tab
+        self.unfolded_data_tab.layout = QVBoxLayout(self.unfolded_data_tab)
         self.unfolded_data_viewer = UnfoldedDataViewer(self)
-        self.tab2.layout.addWidget(self.unfolded_data_viewer)
+        self.unfolded_data_tab.layout.addWidget(self.unfolded_data_viewer)
 
         self.unfolded_data_viewer.show()
+
+        # Create diagram plot data tab
+        self.diagram_tab.layout = QVBoxLayout(self.diagram_tab)
+        self.diagram_data_plot = Plot1D(self.diagram_tab)
+        self.diagram_tab.layout.addWidget(self.diagram_data_plot)
 
         # Add tabs to widget
         self.layout.addWidget(self.tabs)
@@ -86,6 +97,8 @@ class XpadVisualisation(QWidget):
             QMessageBox(QMessageBox.Icon.Critical, "Can't send contextual data",
                         "You must enter a integer (whole number) to run the unfolding of data").exec()
         else:
+            if self.scatter_factor <= 0:
+                self.scatter_factor = 1
             # Create geometry of the detector
             self.geometry = compute_geometry(calibration, self.flatfield_image, self.raw_data)
             # Collect the angles
@@ -107,6 +120,8 @@ class XpadVisualisation(QWidget):
             gamma = self.gamma_array[index] if len(self.gamma_array) > 1 else self.gamma_array[0]
             # Correct and unfold raw data
             unfolded_data = correct_and_unfold_data(self.geometry, image, delta, gamma)
+            self.diagram.append(numpy.cumsum(unfolded_data[0], axis=0))
+            self.angles.append(unfolded_data[0][::self.scatter_factor])
 
             # Add the unfolded image to the scatter stack of image.
             self.unfolded_data_viewer.add_scatter(unfolded_data, self.scatter_factor)
@@ -115,6 +130,8 @@ class XpadVisualisation(QWidget):
         except StopIteration:
             self.unfold_timer.stop()
             self.is_unfolding = False
+            self.diagram_data_plot.addCurve(numpy.concatenate(self.angles, axis=None),
+                                            numpy.concatenate(self.diagram, axis=None))
 
     def get_flatfield(self, flat_img: numpy.ndarray):
         self.flatfield_image = flat_img
