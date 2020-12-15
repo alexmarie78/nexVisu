@@ -2,6 +2,7 @@ from h5py import File
 from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QInputDialog, QLineEdit, QMessageBox
 from PyQt5.QtCore import pyqtSlot, QTimer
 from silx.gui.plot import Plot1D
+from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 
 from src.constants import DataPath
 from src.utils.dataViewers import RawDataViewer, UnfoldedDataViewer
@@ -17,6 +18,7 @@ class XpadVisualisation(QWidget):
     def __init__(self):
         super(QWidget, self).__init__()
         self.layout = QVBoxLayout(self)
+        self.azimuthalIntegrator = AzimuthalIntegrator()
         self.raw_data = None
         self.flatfield_image = None
         self.path = None
@@ -104,6 +106,8 @@ class XpadVisualisation(QWidget):
             # Collect the angles
             self.delta_array, self.gamma_array = get_angles(self.path)
 
+            print(self.delta_array)
+            print(self.gamma_array)
             # Populate the iterators that will help running the unfolding of data
             self.data_iterator = iter([image for image in self.raw_data])
             self.index_iterator = iter([i for i in range(self.raw_data.shape[0])])
@@ -120,7 +124,7 @@ class XpadVisualisation(QWidget):
             gamma = self.gamma_array[index] if len(self.gamma_array) > 1 else self.gamma_array[0]
             # Correct and unfold raw data
             unfolded_data = correct_and_unfold_data(self.geometry, image, delta, gamma)
-            self.diagram.append(numpy.cumsum(unfolded_data[0], axis=0))
+            self.diagram.append(numpy.cumsum(unfolded_data[2], axis=0))
             self.angles.append(unfolded_data[0][::self.scatter_factor])
 
             # Add the unfolded image to the scatter stack of image.
@@ -130,8 +134,9 @@ class XpadVisualisation(QWidget):
         except StopIteration:
             self.unfold_timer.stop()
             self.is_unfolding = False
-            self.diagram_data_plot.addCurve(numpy.concatenate(self.angles, axis=None),
-                                            numpy.concatenate(self.diagram, axis=None))
+            #self.diagram_data_plot.addCurve(numpy.concatenate(self.angles, axis=None),
+            #                                numpy.concatenate(self.diagram, axis=None))
+            self.diagram_data_plot.addCurve(self.azimuthalIntegrator.integrate1d(numpy.concatenate(self.diagram, axis=None), 15000, radial_range=(0, max(self.angles))))
 
     def get_flatfield(self, flat_img: numpy.ndarray):
         self.flatfield_image = flat_img
