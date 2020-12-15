@@ -4,6 +4,9 @@ from PyQt5.QtCore import pyqtSignal
 
 from src.constants import ScanTypes
 
+import json
+import os
+
 
 class ContextualDataGroup(QGroupBox):
     scanLabelChanged = pyqtSignal(str)
@@ -14,6 +17,7 @@ class ContextualDataGroup(QGroupBox):
         self._parent = parent
         self.grid_layout = QGridLayout(self)
         self.contextual_data = {}
+        self.file_loaded = False
         self.init_UI()
 
     def init_UI(self):
@@ -77,6 +81,8 @@ class ContextualDataGroup(QGroupBox):
         self.grid_layout.addWidget(self.scan_label, 7, 0, 1, 2)
         self.grid_layout.addWidget(self.scan_button, 7, 2, 1, 2)
 
+        self.read_calibration()
+
     def distance_computation(self) -> None:
         try:
             self.contextual_data["x"] = float(self.x_input.text())
@@ -88,9 +94,33 @@ class ContextualDataGroup(QGroupBox):
             if not hasattr(self, "send_data_button"):
                 self.send_data_button = QPushButton("Send contextual data")
                 self.grid_layout.addWidget(self.send_data_button, 5, 3)
+                self.send_data_button.clicked.connect(self.write_calibration)
                 self.send_data_button.clicked.connect(self.send_context_data)
         except ValueError:
             pass
+
+    def write_calibration(self) -> None:
+        if not self.file_loaded:
+            temp = self.contextual_data
+            temp["file"] = self._parent.scan
+            with open('calibration.json', 'w') as outfile:
+                json.dump(temp, outfile)
+            print("Calibration saved.")
+        else:
+            self.file_loaded = False
+
+    def read_calibration(self) -> None:
+        try:
+            with open('calibration.json', 'r') as infile:
+                data = json.load(infile)
+            self.x_input.setText(str(data["x"]))
+            self.y_input.setText(str(data["y"]))
+            self.delta_input.setText(str(data["delta_position"]))
+            self.gamma_input.setText(str(data["gamma_position"]))
+            self.file_loaded = True
+        except IOError:
+            print("Calibration not found")
+            self.file_loaded = False
 
     def send_context_data(self) -> None:
         if hasattr(self._parent, "scan") and self._parent.scan != "":
