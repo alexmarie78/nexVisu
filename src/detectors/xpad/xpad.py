@@ -1,12 +1,7 @@
-from .xpadContext import DataContext
-from .xpadProcess import XpadVisualisation
+from src.detectors.xpad.xpadContext import DataContext
+from src.detectors.xpad.xpadProcess import XpadVisualisation
 from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QApplication
-from PyQt5.QtCore import pyqtSlot, pyqtSignal
-
-import numpy
-import os
-import platform
-import sys
+from PyQt5.QtCore import pyqtSlot
 
 
 class Xpad(QWidget):
