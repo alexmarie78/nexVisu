@@ -45,9 +45,9 @@ class UnfoldedDataViewer(QWidget):
 
     def add_scatter(self, scatter_image: tuple, scatter_factor: int):
         # Add an image to the stack. If it is the first, emit the selectionChanged signal to plot the first image
-        if scatter_factor <= 0:
-            scatter_factor = 1
-        self.stack.append((scatter_image[0][::scatter_factor], scatter_image[1][::scatter_factor], scatter_image[2][::scatter_factor]))
+        self.stack.append((scatter_image[0][::scatter_factor],
+                           scatter_image[1][::scatter_factor],
+                           scatter_image[2][::scatter_factor]))
         if self.initial_data_flag:
             self.scatter_selector.selectionChanged.emit()
             self.initial_data_flag = False

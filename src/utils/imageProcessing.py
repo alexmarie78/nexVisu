@@ -67,7 +67,7 @@ def compute_geometry(contextual_data: dict, flat_image: numpy.ndarray, images: n
     number_of_chips = images.shape[2] // chip_size_x  # detector dimension, XPAD S-140
     distance = contextual_data["distance"] / numpy.tan(1.0 * deg2rad)
     lines_to_remove_array = [0, -3]
-    between_chips = [i * 80 + 3 * (i - 1) + 1  for i in range(1,7)]
+    between_chips = [i * 80 + 3 * (i - 1) + 1 for i in range(1, 7)]
 
     if flat_image is not None:
         factor_intensity_double_pixel = 1.0
@@ -108,8 +108,8 @@ def compute_geometry(contextual_data: dict, flat_image: numpy.ndarray, images: n
         new_x_ifactor_array[temp_index0 - 1 : temp_index0 + 1] = [-1.0 / factor_intensity_double_pixel] * 2
 
         # Last two columns of chip i and double pixel
-        new_x_array[temp_index0 + 79 : temp_index0 + 82] = [80 * indexChip + 79] * 3
-        new_x_ifactor_array[temp_index0 + 79 : temp_index0 + 81] = [-1.0 / factor_intensity_double_pixel] * 2
+        new_x_array[temp_index0 + 79: temp_index0 + 82] = [80 * indexChip + 79] * 3
+        new_x_ifactor_array[temp_index0 + 79: temp_index0 + 81] = [-1.0 / factor_intensity_double_pixel] * 2
         new_x_ifactor_array[temp_index0 + 81] = -10
 
     for x in range(6 * 80 + 1, 560):  # this is the last chip (image_index chip = 6)
