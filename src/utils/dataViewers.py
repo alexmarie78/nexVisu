@@ -61,11 +61,11 @@ class UnfoldedDataViewer(QWidget):
         # If there is at least one unfolded image, clear the view, unpack the data and plot a scatter view of the image
         if len(self.stack) > 0:
             self.clear_scatter_view()
-            x_array, y_array, intensity = self.stack[self.scatter_selector.selection()[0]]
-            self.plot.setGraphXLimits(min(x_array) - 0.0, max(x_array) + 0.0)
-            self.plot.setGraphYLimits(min(y_array) - 5.0, max(y_array) + 5.0)
+            tth_array, psi_array, intensity = self.stack[self.scatter_selector.selection()[0]]
+            self.plot.setGraphXLimits(min(tth_array) - 0.0, max(tth_array) + 0.0)
+            self.plot.setGraphYLimits(min(psi_array) - 5.0, max(psi_array) + 5.0)
             start = time.time()
-            self.scatter_view.setData(x_array, y_array, intensity, copy=False)
+            self.scatter_view.setData(tth_array, psi_array, intensity, copy=False)
             end = time.time()
             print("Setting the data took :", (end - start) * 1000.0, " ms")
 
