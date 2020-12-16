@@ -1,6 +1,8 @@
 from h5py import File
 from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QInputDialog, QLineEdit, QMessageBox
 from PyQt5.QtCore import pyqtSlot, QTimer
+from silx.gui.data.NumpyAxesSelector import NumpyAxesSelector
+from silx.gui.fit import FitWidget
 from silx.gui.plot import Plot1D
 
 from src.constants import DataPath
@@ -38,23 +40,23 @@ class XpadVisualisation(QWidget):
         self.raw_data_tab = QWidget()
         self.unfolded_data_tab = QWidget()
         self.diagram_tab = QWidget()
-        self.fitted_data_tab = QWidget()
+        self.fitting_data_tab = QWidget()
         self.tabs.resize(400, 300)
 
         # Add tabs
         self.tabs.addTab(self.raw_data_tab, "Raw data")
         self.tabs.addTab(self.unfolded_data_tab, "Unfolded data")
         self.tabs.addTab(self.diagram_tab, "Diffraction diagram")
-        self.tabs.addTab(self.fitted_data_tab, "Fitted data")
+        self.tabs.addTab(self.fitting_data_tab, "Fitted data")
 
         # Create raw data display tab
         self.raw_data_tab.layout = QVBoxLayout(self.raw_data_tab)
-        self.raw_data_viewer = RawDataViewer(self)
+        self.raw_data_viewer = RawDataViewer(self.raw_data_tab)
         self.raw_data_tab.layout.addWidget(self.raw_data_viewer)
 
         # Create unfolded and corrected data tab
         self.unfolded_data_tab.layout = QVBoxLayout(self.unfolded_data_tab)
-        self.unfolded_data_viewer = UnfoldedDataViewer(self)
+        self.unfolded_data_viewer = UnfoldedDataViewer(self.unfolded_data_tab)
         self.unfolded_data_tab.layout.addWidget(self.unfolded_data_viewer)
 
         self.unfolded_data_viewer.show()
@@ -64,10 +66,30 @@ class XpadVisualisation(QWidget):
         self.diagram_data_plot = Plot1D(self.diagram_tab)
         self.diagram_tab.layout.addWidget(self.diagram_data_plot)
 
+        self.diagram_data_plot.setGraphTitle(f"Diagram diffraction")
+        self.diagram_data_plot.setGraphXLabel("two-theta (°)")
+        self.diagram_data_plot.setGraphYLabel("intensity")
+        self.diagram_data_plot.setYAxisLogarithmic(True)
+
+        # Create fitting curve tab
+        self.fitting_data_tab.layout = QVBoxLayout(self.fitting_data_tab)
+        self.fitting_data_widget = FitWidget(self.fitting_data_tab)
+        self.fitting_data_selector = NumpyAxesSelector(self.fitting_data_tab)
+        self.fitting_data_selector.setNamedAxesSelectorVisibility(False)
+        self.fitting_data_selector.setVisible(True)
+        self.fitting_data_selector.setAxisNames("12")
+        self.fitting_data_plot = Plot1D(self.fitting_data_tab)
+        self.fitting_data_plot.setYAxisLogarithmic(True)
+
+        self.fitting_data_tab.layout.addWidget(self.fitting_data_widget)
+        self.fitting_data_tab.layout.addWidget(self.fitting_data_plot)
+        self.fitting_data_tab.layout.addWidget(self.fitting_data_selector)
+
         # Add tabs to widget
         self.layout.addWidget(self.tabs)
 
         self.unfold_timer.timeout.connect(self.unfold_data)
+        self.fitting_data_selector.selectionChanged.connect(self.fitting_curve)
         self.unfolded_data_viewer.scatter_selector.selectionChanged.connect(self.synchronize_visualisation)
 
     @pyqtSlot()
@@ -82,8 +104,9 @@ class XpadVisualisation(QWidget):
             self.raw_data = get_dataset(h5file, DataPath.IMAGE_INTERPRETATION.value)[:]
         # We put the raw data in the dataviewer
         self.raw_data_viewer.set_movie(self.raw_data)
-        # We allocate a number of view in the stack
+        # We allocate a number of view in the stack of unfolded data and fitting data
         self.unfolded_data_viewer.set_stack_slider(self.raw_data.shape[0])
+        self.fitting_data_selector.setData(numpy.zeros((self.raw_data.shape[0], 1, 1)))
 
     def start_unfolding_raw_data(self, calibration: dict) -> None:
         if self.is_unfolding:
@@ -135,7 +158,8 @@ class XpadVisualisation(QWidget):
         except StopIteration:
             self.unfold_timer.stop()
             self.is_unfolding = False
-            self.extract_and_plot_diagram([0, 1])
+            self.plot_diagram([0, 1])
+            self.fitting_data_selector.selectionChanged.emit()
 
     def get_flatfield(self, flat_img: numpy.ndarray):
         self.flatfield_image = flat_img
@@ -149,14 +173,21 @@ class XpadVisualisation(QWidget):
         self.unfold_timer.stop()
         self.unfolded_data_viewer.reset_scatter_view()
 
-    def extract_and_plot_diagram(self, images_to_remove=[-1]):
+    def plot_diagram(self, images_to_remove=[-1]):
         self.diagram_data_plot.setGraphTitle(f"Diagram diffraction of {self.path.split('/')[-1]}")
-        self.diagram_data_plot.setGraphXLabel("two-theta (°)")
-        self.diagram_data_plot.setGraphYLabel("intensity")
-        self.diagram_data_plot.setYAxisLogarithmic(True)
         for index, curve in enumerate(self.diagram_data_array):
             if index not in images_to_remove:
                 self.diagram_data_plot.addCurve(curve[0], curve[1], f'Data of image {index}', color="#0000FF", replace=False)
+
+    def fitting_curve(self):
+        if len(self.diagram_data_array) > 0:
+            self.clear_fitting_widget()
+            curve = self.diagram_data_array[self.fitting_data_selector.selection()[0]]
+            self.fitting_data_widget.setData(curve[0], curve[1])
+            self.fitting_data_plot.addCurve(curve[0], curve[1])
+
+    def clear_fitting_widget(self):
+        self.fitting_data_widget.setData(None, None, None)
 
 
 
