@@ -136,6 +136,7 @@ def compute_geometry(contextual_data: dict, flat_image: numpy.ndarray, images: n
         "deg2rad": deg2rad,
         "inv_deg2rad": inv_deg2rad,
         "distance": distance,
+        "calib": calib,
         "x_center_detector": x_center_detector,
         "y_center_detector": y_center_detector,
         "chip_size_y": chip_size_y,
@@ -244,8 +245,8 @@ def correct_and_unfold_data(geometry: dict, image: numpy.ndarray, delta: float, 
     # Line between the two modules (0.5 + 0.5 pixels)
     this_corrected_image[line_index1 + 2, :] = (this_corrected_image[line_index1, :] + this_corrected_image[line_index1 + 4, :]) / 2.0
 
-    # IntensityArray = this_corrected_image.T.reshape(image_corr1_size_x * image_corr1_size_y)
     # this is the corrected intensity of each pixel, on the image having the new size
+    """
     tth = []
     psi = []
     corrected = []
@@ -254,7 +255,70 @@ def correct_and_unfold_data(geometry: dict, image: numpy.ndarray, delta: float, 
             tth.append(two_th_array[y, x])
             psi.append(psi_array[y, x])
             corrected.append(this_corrected_image[y, x])
-    return tth, psi, corrected
+    """
+    intensity_array = this_corrected_image.T.reshape(geometry["image_corr1_size_x"] * geometry["image_corr1_size_y"])
+    psi_array = psi_array.T.reshape(geometry["image_corr1_size_x"] * geometry["image_corr1_size_y"])
+    two_th_array = two_th_array.T.reshape(geometry["image_corr1_size_x"] * geometry["image_corr1_size_y"])
+    return two_th_array, psi_array, intensity_array
+
+
+def extract_diffraction_diagram(two_th_array, psi_array, intensity_array, step_two_th, psi1, psi2, patch_data_flag=True):
+    mask_psi = numpy.ones(psi_array.shape)
+    mask_psi[psi_array < psi1] = 0.0
+    mask_psi[psi_array > psi2] = 0.0
+
+    two_th_min = two_th_array.min()
+    two_th_max = two_th_array.max()
+
+    nb_of_bins = int((0.0 + two_th_max - two_th_min) / step_two_th) + 1
+
+    two_th_result = numpy.zeros(nb_of_bins + 1)  # generate the tables for radial integration, this is delta
+
+    for ii in range(0, nb_of_bins):
+        two_th_temp1 = two_th_min + ii * step_two_th
+        two_th_temp2 = two_th_temp1 + step_two_th
+        two_th_result[ii] = 0.5 * (two_th_temp1 + two_th_temp2)
+
+    this_bin_array = numpy.floor((two_th_array * mask_psi - two_th_min) / step_two_th)
+    this_bin_array = this_bin_array.astype('int')
+
+    intensity_result = numpy.zeros(nb_of_bins + 1) # this will be the summed intensity
+    intensity_array = intensity_array * mask_psi
+
+    indexes_ = numpy.nonzero(intensity_array > 0)[0]
+    my_bin = this_bin_array[indexes_]
+
+    my_intensity = intensity_array[indexes_]
+    aggregated = numpy.zeros(nb_of_bins + 1)
+    for i in range(my_bin.max() + 1):
+        selected_intensities = my_intensity[my_bin == i]
+        intensity_result[i] = selected_intensities.mean()
+
+    intensity_result[numpy.isnan(intensity_result)] = -1
+
+    if patch_data_flag:
+        two_th_result, intensity_result = patch_data(two_th_result, intensity_result)
+
+    return two_th_result[1: -1], intensity_result[1: -1]
+
+
+def patch_data(tth_data_array, intensity_data_array):
+    nb_points2throw_begin = 15
+    nb_points2throw_end = 15
+    tth1 = 0.
+    tth2 = 150.
+    tth_step = 0.0105
+    npoints = int(round((tth2 - tth1) / tth_step)) + 1
+    tth_array = numpy.linspace(tth1, tth2, npoints)
+    intensity_array = numpy.zeros(npoints)
+    n_intensity_array = numpy.zeros(npoints)
+    for uu in range(nb_points2throw_begin, tth_data_array.shape[0] - nb_points2throw_end):
+        tth_index = int(round((tth_data_array[uu] - tth1) / tth_step))
+        if intensity_data_array[uu] > 0:
+            intensity_array[tth_index] += intensity_data_array[uu]
+            n_intensity_array[tth_index] += 1.
+    intensity_array = intensity_array / n_intensity_array
+    return tth_array, intensity_array
 
 
 def get_angles(path: str) -> (numpy.ndarray, numpy.ndarray):

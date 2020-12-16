@@ -2,12 +2,10 @@ from h5py import File
 from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QInputDialog, QLineEdit, QMessageBox
 from PyQt5.QtCore import pyqtSlot, QTimer
 from silx.gui.plot import Plot1D
-from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
-from pyFAI.detectors._imxpad import ImXPadS140
 
 from src.constants import DataPath
 from src.utils.dataViewers import RawDataViewer, UnfoldedDataViewer
-from src.utils.imageProcessing import compute_geometry, correct_and_unfold_data, get_angles
+from src.utils.imageProcessing import compute_geometry, correct_and_unfold_data, get_angles, extract_diffraction_diagram
 from src.utils.nexusNavigation import get_dataset
 
 import numpy
@@ -19,7 +17,6 @@ class XpadVisualisation(QWidget):
     def __init__(self):
         super(QWidget, self).__init__()
         self.layout = QVBoxLayout(self)
-        self.azimuthalIntegrator = AzimuthalIntegrator(dist=0.1, detector=ImXPadS140())
         self.raw_data = None
         self.flatfield_image = None
         self.path = None
@@ -30,7 +27,7 @@ class XpadVisualisation(QWidget):
         self.delta_array = None
         self.geometry = None
         self.is_unfolding = False
-        self.diagram = []
+        self.diagram_data_array = []
         self.angles = []
         self.init_UI()
 
@@ -83,7 +80,6 @@ class XpadVisualisation(QWidget):
         self.path = path
         with File(os.path.join(path), mode='r') as h5file:
             self.raw_data = get_dataset(h5file, DataPath.IMAGE_INTERPRETATION.value)[:]
-            self.azimuthalIntegrator.wavelength = get_dataset(h5file, DataPath.WAVELENGTH.value)[0]
         # We put the raw data in the dataviewer
         self.raw_data_viewer.set_movie(self.raw_data)
         # We allocate a number of view in the stack
@@ -124,8 +120,13 @@ class XpadVisualisation(QWidget):
             gamma = self.gamma_array[index] if len(self.gamma_array) > 1 else self.gamma_array[0]
             # Correct and unfold raw data
             unfolded_data = correct_and_unfold_data(self.geometry, image, delta, gamma)
-            self.diagram.append(self.azimuthalIntegrator.integrate1d(image, 2000    , unit="2th_deg", radial_range=(0, 40)))
-            self.angles.append(unfolded_data[0][::self.scatter_factor])
+            self.diagram_data_array.append(extract_diffraction_diagram(unfolded_data[0],
+                                                                       unfolded_data[1],
+                                                                       unfolded_data[2],
+                                                                       1.0/self.geometry["calib"],
+                                                                       -100,
+                                                                       100,
+                                                                       patch_data_flag=True))
 
             # Add the unfolded image to the scatter stack of image.
             self.unfolded_data_viewer.add_scatter(unfolded_data, self.scatter_factor)
@@ -134,23 +135,7 @@ class XpadVisualisation(QWidget):
         except StopIteration:
             self.unfold_timer.stop()
             self.is_unfolding = False
-            #data = numpy.asarray(self.diagram)
-            #print(type(data), data.shape, data.dtype)
-            # radial_range = (0, int(max(numpy.concatenate(self.angles, axis=None))))
-            # result = self.azimuthalIntegrator.integrate1d(data[0], 15000,
-            #                                             unit="2th_deg",
-            #                                             method="splitpixel",
-            #                                            radial_range=radial_range)
-            result_x = numpy.zeros((len(self.diagram[0][0]),))
-            result_y = numpy.zeros((len(self.diagram[0][0]),))
-            index = 0
-            for index, data in enumerate(self.diagram):
-                result_x += data[0]
-                result_y += data[1]
-                index = index
-            result_x = result_x/index
-            result_y = result_y/index
-            self.diagram_data_plot.addCurve(result_x, result_y)
+            self.extract_and_plot_diagram([0, 1])
 
     def get_flatfield(self, flat_img: numpy.ndarray):
         self.flatfield_image = flat_img
@@ -163,3 +148,15 @@ class XpadVisualisation(QWidget):
         self.is_unfolding = False
         self.unfold_timer.stop()
         self.unfolded_data_viewer.reset_scatter_view()
+
+    def extract_and_plot_diagram(self, images_to_remove=[-1]):
+        self.diagram_data_plot.setGraphTitle(f"Diagram diffraction of {self.path.split('/')[-1]}")
+        self.diagram_data_plot.setGraphXLabel("two-theta (°)")
+        self.diagram_data_plot.setGraphYLabel("intensity")
+        self.diagram_data_plot.setYAxisLogarithmic(True)
+        for index, curve in enumerate(self.diagram_data_array):
+            if index not in images_to_remove:
+                self.diagram_data_plot.addCurve(curve[0], curve[1], f'Data of image {index}', color="#0000FF", replace=False)
+
+
+

@@ -77,6 +77,12 @@ class UnfoldedDataViewer(QWidget):
         self.stack = []
         self.initial_data_flag = True
 
+    def get_scatter_item(self, index: int) -> tuple:
+        return self.stack[index]
+
+    def get_scatter_items(self) -> list:
+        return self.stack
+
 
 class RawDataViewer(StackView):
     def __init__(self, parent):
