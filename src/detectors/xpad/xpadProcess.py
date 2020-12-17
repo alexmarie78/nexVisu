@@ -1,5 +1,5 @@
 from h5py import File
-from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QInputDialog, QLineEdit, QMessageBox
+from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QInputDialog, QLineEdit, QMessageBox, QHBoxLayout
 from PyQt5.QtCore import pyqtSlot, QTimer
 from silx.gui.data.NumpyAxesSelector import NumpyAxesSelector
 from silx.gui.fit import FitWidget
@@ -81,9 +81,19 @@ class XpadVisualisation(QWidget):
         self.fitting_data_plot = Plot1D(self.fitting_data_tab)
         self.fitting_data_plot.setYAxisLogarithmic(True)
 
+
+        self.fitting_data_widget_bis = QWidget()
+        self.fitting_data_widget_bis.layout = QHBoxLayout(self.fitting_data_widget_bis)
+        self.fitting_data_widget_bis.layout.addWidget(self.fitting_data_widget)
+        self.fitting_data_widget_bis.layout.addWidget(self.fitting_data_plot)
+        self.fitting_data_tab.layout.addWidget(self.fitting_data_widget_bis)
+        self.fitting_data_tab.layout.addWidget(self.fitting_data_selector)
+
+        """
         self.fitting_data_tab.layout.addWidget(self.fitting_data_widget)
         self.fitting_data_tab.layout.addWidget(self.fitting_data_plot)
         self.fitting_data_tab.layout.addWidget(self.fitting_data_selector)
+        """
 
         # Add tabs to widget
         self.layout.addWidget(self.tabs)
@@ -183,8 +193,20 @@ class XpadVisualisation(QWidget):
         if len(self.diagram_data_array) > 0:
             self.clear_fitting_widget()
             curve = self.diagram_data_array[self.fitting_data_selector.selection()[0]]
+            # Collect every index of the array where the value is not nan
+            indexes_not_nan = numpy.where(~numpy.isnan(curve[1]))[0]
+
+            index_x_min = indexes_not_nan[0]
+            index_x_max = indexes_not_nan[-1]
+
+            index_y_min = int(numpy.floor(min(curve[1][indexes_not_nan[0]: indexes_not_nan[-1] + 1])))
+            index_y_max = int(numpy.ceil(max(curve[1][indexes_not_nan[0]: indexes_not_nan[-1] + 1])))
+
             self.fitting_data_widget.setData(curve[0], curve[1])
             self.fitting_data_plot.addCurve(curve[0], curve[1])
+            self.fitting_data_plot.setLimits(curve[0][index_x_min],
+                                             curve[0][index_x_max],
+                                             index_y_min, index_y_max)
 
     def clear_fitting_widget(self):
         self.fitting_data_widget.setData(None, None, None)
