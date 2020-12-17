@@ -73,8 +73,8 @@ def compute_geometry(contextual_data: dict, flat_image: numpy.ndarray, images: n
         factor_intensity_double_pixel = 1.0
         flat_image = 1.0 * flat_image / flat_image.mean()
         flat_image_inv = 1.0 / flat_image
-        # flat_image_inv[numpy.isnan(flat_image_inv)] = -10000000
-        # flat_image_inv[numpy.isinf(flat_image_inv)] = -10000000
+        flat_image_inv[numpy.isnan(flat_image_inv)] = -10000000
+        flat_image_inv[numpy.isinf(flat_image_inv)] = -10000000
     else:
         flat_image_inv = numpy.ones_like(images[0], dtype=numpy.float32)
         factor_intensity_double_pixel = 2.3

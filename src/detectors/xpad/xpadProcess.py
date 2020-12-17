@@ -193,15 +193,13 @@ class XpadVisualisation(QWidget):
         if len(self.diagram_data_array) > 0:
             self.clear_fitting_widget()
             curve = self.diagram_data_array[self.fitting_data_selector.selection()[0]]
-            # Collect every index of the array where the value is not nan
-            indexes_not_nan = numpy.where(~numpy.isnan(curve[1]))[0]
-
+            # Collect every index of the array where the value is not nan nor inf if flat used
+            indexes_not_nan = numpy.where(numpy.logical_and(~numpy.isnan(curve[1]), ~numpy.isinf(curve[1])))[0]
             index_x_min = indexes_not_nan[0]
             index_x_max = indexes_not_nan[-1]
 
             index_y_min = int(numpy.floor(min(curve[1][indexes_not_nan[0]: indexes_not_nan[-1] + 1])))
             index_y_max = int(numpy.ceil(max(curve[1][indexes_not_nan[0]: indexes_not_nan[-1] + 1])))
-
             self.fitting_data_widget.setData(curve[0], curve[1])
             self.fitting_data_plot.addCurve(curve[0], curve[1])
             self.fitting_data_plot.setLimits(curve[0][index_x_min],
