@@ -4,6 +4,7 @@ from PyQt5.QtCore import pyqtSlot, QTimer
 from silx.gui.data.NumpyAxesSelector import NumpyAxesSelector
 from silx.gui.fit import FitWidget
 from silx.gui.plot import Plot1D
+from silx.math.fit.functions import sum_gauss, sum_lorentz, sum_pvoigt
 
 from src.constants import DataPath, FittingCurves
 from src.utils.dataViewers import RawDataViewer, UnfoldedDataViewer
@@ -80,7 +81,8 @@ class XpadVisualisation(QWidget):
         self.fitting_data_selector.setAxisNames("12")
         self.fitting_data_plot = Plot1D(self.fitting_data_tab)
         self.fitting_data_plot.setYAxisLogarithmic(True)
-
+        # Set the curves marker to points
+        # self.fitting_data_plot.set
 
         self.fitting_data_widget_bis = QWidget()
         self.fitting_data_widget_bis.layout = QHBoxLayout(self.fitting_data_widget_bis)
@@ -89,11 +91,6 @@ class XpadVisualisation(QWidget):
         self.fitting_data_tab.layout.addWidget(self.fitting_data_widget_bis)
         self.fitting_data_tab.layout.addWidget(self.fitting_data_selector)
 
-        """
-        self.fitting_data_tab.layout.addWidget(self.fitting_data_widget)
-        self.fitting_data_tab.layout.addWidget(self.fitting_data_plot)
-        self.fitting_data_tab.layout.addWidget(self.fitting_data_selector)
-        """
 
         # Add tabs to widget
         self.layout.addWidget(self.tabs)
@@ -194,34 +191,46 @@ class XpadVisualisation(QWidget):
         if len(self.diagram_data_array) > 0:
             self.clear_fitting_widget()
             curve = self.diagram_data_array[self.fitting_data_selector.selection()[0]]
-            # Collect every index of the array where the value is not nan nor inf if flat used
-            indexes_not_nan = numpy.where(numpy.logical_and(~numpy.isnan(curve[1]), ~numpy.isinf(curve[1])))[0]
-            index_x_min = indexes_not_nan[0]
-            index_x_max = indexes_not_nan[-1]
-
-            index_y_min = int(numpy.floor(min(curve[1][indexes_not_nan[0]: indexes_not_nan[-1] + 1])))
-            index_y_max = int(numpy.ceil(max(curve[1][indexes_not_nan[0]: indexes_not_nan[-1] + 1])))
             self.fitting_data_widget.setData(curve[0], curve[1])
             self.fitting_data_plot.addCurve(curve[0], curve[1])
-            self.fitting_data_plot.setLimits(curve[0][index_x_min],
-                                             curve[0][index_x_max],
-                                             index_y_min, index_y_max)
+            self.set_graph_limits(curve)
 
     def clear_fitting_widget(self):
         self.fitting_data_widget.setData(None, None, None)
+        self.fitting_data_plot.clear()
 
     def plot_fitting_result(self, event: dict):
         if event['event'] == 'FitFinished':
-            print(self.fitting_data_widget.fitmanager.get_fitted_parameters())
-            print(self.fitting_data_widget.fitmanager.fitconfig.values())
+            params = self.fitting_data_widget.fitmanager.get_fitted_parameters()
             for index in range(len(event['data'])//3):
                 _dict = event['data'][index * 3:(index + 1) * 3]
                 x_min = int(numpy.floor(float(_dict[0]['xmin'])))
                 x_max = int(numpy.ceil(float(_dict[0]['xmax'])))
-                x_array = numpy.linspace(x_min, x_max, x_max-x_min)
-                y_array = fit_func(x_array)
-                self.fitting_data_plot.addCurve(x_array, y_array)
+                x_array = numpy.linspace(x_min, x_max, 2000)
+                height, center, fwhm = params[index * 3: (index + 1) * 3]
+                print(height, center, fwhm)
+                y_array = self.fit_func(x_array, height, center, fwhm)
+                print(x_array, y_array)
+                self.fitting_data_plot.addCurve(x_array, y_array, f"Fitted curve for peak {index}")
+                self.set_graph_limits(self.diagram_data_array[self.fitting_data_selector.selection()[0]])
 
-    def fit_func(self, x, backgr, slopeLin, area, center, fwhm, mode):
-        if mode == FittingCurves.GAUSSIAN.value:
-            return numpy.exp(-numpy.power(x - mu, 2.) / (2 * numpy.power(sig, 2.)))
+    def fit_func(self, x_array, height, center, fwhm, backgr=None):
+        if self.fitting_data_widget.guiConfig.FunComBox.currentText() == "Gaussians":
+            return sum_gauss(x_array, height, center, fwhm)
+        if self.fitting_data_widget.guiConfig.FunComBox.currentText() == "Lorentz":
+            return sum_lorentz(x_array, height, center, fwhm)
+        """
+        if self.fitting_data_widget.guiConfig.FunComBox.currentText() == "Pseudo-Voigt Line":
+            return sum_pvoigt(x_array, height, center, fwhm)
+        """
+
+    def set_graph_limits(self, curve):
+        indexes_not_nan = numpy.where(numpy.logical_and(~numpy.isnan(curve[1]), ~numpy.isinf(curve[1])))[0]
+        index_x_min = indexes_not_nan[0]
+        index_x_max = indexes_not_nan[-1]
+
+        index_y_min = int(numpy.floor(min(curve[1][indexes_not_nan[0]: indexes_not_nan[-1] + 1])))
+        index_y_max = int(numpy.ceil(max(curve[1][indexes_not_nan[0]: indexes_not_nan[-1] + 1])))
+        self.fitting_data_plot.setLimits(curve[0][index_x_min],
+                                         curve[0][index_x_max],
+                                         index_y_min, index_y_max)

@@ -17,9 +17,13 @@ class ScanTypes(Enum):
 
 
 class FittingCurves(Enum):
-    GAUSSIAN = "gaussian"
-    GAUSSIANb = "gaussianb"
-    LORENTZ = "lorentz"
+    GAUSSIAN = "Gaussians"
+    GAUSSIAN_AREA = "Area Gaussians"
+    GAUSSIANb = "Gaussiansb"
+    LORENTZ = "Lorentz"
+    LORENTZ_AREA = "Area Lorentz"
+    PSEUDO_VOIGT = "Pseudo-Voigt Line"
+    PSEUDO_VOIGT_AREA = "Area Pseudo-Voigt"
 
 
 class MetadataPath(Enum):
