@@ -5,7 +5,7 @@ from silx.gui.data.NumpyAxesSelector import NumpyAxesSelector
 from silx.gui.fit import FitWidget
 from silx.gui.plot import Plot1D
 
-from src.constants import DataPath
+from src.constants import DataPath, FittingCurves
 from src.utils.dataViewers import RawDataViewer, UnfoldedDataViewer
 from src.utils.imageProcessing import compute_geometry, correct_and_unfold_data, get_angles, extract_diffraction_diagram
 from src.utils.nexusNavigation import get_dataset
@@ -100,6 +100,7 @@ class XpadVisualisation(QWidget):
 
         self.unfold_timer.timeout.connect(self.unfold_data)
         self.fitting_data_selector.selectionChanged.connect(self.fitting_curve)
+        self.fitting_data_widget.sigFitWidgetSignal.connect(self.plot_fitting_result)
         self.unfolded_data_viewer.scatter_selector.selectionChanged.connect(self.synchronize_visualisation)
 
     @pyqtSlot()
@@ -209,5 +210,18 @@ class XpadVisualisation(QWidget):
     def clear_fitting_widget(self):
         self.fitting_data_widget.setData(None, None, None)
 
+    def plot_fitting_result(self, event: dict):
+        if event['event'] == 'FitFinished':
+            print(self.fitting_data_widget.fitmanager.get_fitted_parameters())
+            print(self.fitting_data_widget.fitmanager.fitconfig.values())
+            for index in range(len(event['data'])//3):
+                _dict = event['data'][index * 3:(index + 1) * 3]
+                x_min = int(numpy.floor(float(_dict[0]['xmin'])))
+                x_max = int(numpy.ceil(float(_dict[0]['xmax'])))
+                x_array = numpy.linspace(x_min, x_max, x_max-x_min)
+                y_array = fit_func(x_array)
+                self.fitting_data_plot.addCurve(x_array, y_array)
 
-
+    def fit_func(self, x, backgr, slopeLin, area, center, fwhm, mode):
+        if mode == FittingCurves.GAUSSIAN.value:
+            return numpy.exp(-numpy.power(x - mu, 2.) / (2 * numpy.power(sig, 2.)))

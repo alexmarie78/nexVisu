@@ -17,9 +17,9 @@ class ScanTypes(Enum):
 
 
 class FittingCurves(Enum):
-    GAUSSIAN = "GAUSSIAN"
-    GAUSSIANb = "GAUSSIANb"
-    LORENTZ = "LORENTZ"
+    GAUSSIAN = "gaussian"
+    GAUSSIANb = "gaussianb"
+    LORENTZ = "lorentz"
 
 
 class MetadataPath(Enum):
