@@ -84,8 +84,9 @@ class ContextualDataGroup(QGroupBox):
         try:
             differences = []
             for index in range(1, inputs.input_number()):
-                differences.append(float(inputs.get_label_at(index))
-                                   - float(inputs.get_label_at(index - 1)))
+                if inputs.get_label_at(index) != '':
+                    differences.append(float(inputs.get_label_at(index))
+                                       - float(inputs.get_label_at(index - 1)))
             self.distance_output.setText(str(statistics.mean(differences)))
             self.set_contextual_data()
         except statistics.StatisticsError:
@@ -129,8 +130,12 @@ class ContextualDataGroup(QGroupBox):
             self.y_tab_input.inner_widget.layout().itemAt(0).widget().setText(str(data["y"]))
             self.delta_tab_input.inner_widget.layout().itemAt(0).widget().setText(str(data["delta_position"]))
             self.gamma_tab_input.inner_widget.layout().itemAt(0).widget().setText(str(data["gamma_position"]))
+            if "distance" in data.keys():
+                self.distance_output.setText(str(data["distance"]))
+                self.set_contextual_data()
+                self.test_send_data()
             self.file_loaded = True
-        except (IOError, KeyError):
+        except IOError:
             print("Calibration not found")
             self.file_loaded = False
 
