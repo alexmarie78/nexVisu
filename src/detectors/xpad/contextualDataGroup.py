@@ -43,10 +43,10 @@ class ContextualDataGroup(QGroupBox):
         self.y_tab_input = LabelledInputWidget(self, "y (pixels) : ")
         self.y_tab_input.labelFilled.connect(self.distance_computation)
 
-        self.delta_tab_input = LabelledInputWidget(self, "delta (°) : ")
+        self.delta_tab_input = LabelledInputWidget(self, "delta (°) : ", False)
         self.delta_tab_input.labelFilled.connect(self.distance_computation)
 
-        self.gamma_tab_input = LabelledInputWidget(self, "gamma (°) : ")
+        self.gamma_tab_input = LabelledInputWidget(self, "gamma (°) : ", False)
         self.gamma_tab_input.labelFilled.connect(self.distance_computation)
 
         self.distance_label = QLabel("number of pixel/° : ")

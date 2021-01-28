@@ -6,14 +6,16 @@ from PyQt5.QtCore import pyqtSignal
 class LabelledInputWidget(QWidget):
     labelFilled = pyqtSignal()
 
-    def __init__(self, parent, label: str):
+    def __init__(self, parent, label: str, button_flag=True):
         super().__init__(parent=parent)
-        # self.setFixedSize(parent.size().width(), parent.size().height())
         self.layout = QHBoxLayout(self)
 
-        self.label = QLabel(label)
+        self.button_flag = button_flag
 
-        self.button = QPushButton("+")
+        self.label = QLabel(label)
+        if self.button_flag:
+            self.button = QPushButton("+")
+            self.button.clicked.connect(self.add_row)
 
         self.scrollArea = QScrollArea()
         self.scrollArea.setWidgetResizable(True)
@@ -24,17 +26,22 @@ class LabelledInputWidget(QWidget):
 
         self.scrollArea.setWidget(self.inner_widget)
 
-        self.scrollArea.setFixedHeight(self.button.sizeHint().width())
+        if self.button_flag:
+            self.scrollArea.setFixedHeight(self.button.sizeHint().width())
+        else:
+            self.scrollArea.setFixedHeight(self.label.sizeHint().width())
 
-        self.button.clicked.connect(self.add_row)
         self.init_ui()
 
     def init_ui(self):
         self.layout.addWidget(self.label)
         self.layout.addWidget(self.scrollArea)
-        self.layout.addWidget(self.button)
-
-        self.button.clicked.emit()
+        if self.button_flag:
+            self.layout.addWidget(self.button)
+            self.button.clicked.emit()
+        else:
+            self.add_row()
+            self.labelFilled.emit()
 
     def add_row(self):
         if self.inner_widget.layout().count() < 10:
