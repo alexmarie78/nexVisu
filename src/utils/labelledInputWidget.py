@@ -19,7 +19,8 @@ class LabelledInputWidget(QWidget):
 
         self.scrollArea = QScrollArea()
         self.scrollArea.setWidgetResizable(True)
-        self.scrollArea.setVerticalScrollBarPolicy(2)
+        if self.button_flag:
+            self.scrollArea.setVerticalScrollBarPolicy(2)
 
         self.inner_widget = QWidget(self.scrollArea)
         self.inner_widget.setLayout(QVBoxLayout())
