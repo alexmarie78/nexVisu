@@ -1,10 +1,12 @@
 from h5py import File
 from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QInputDialog, QLineEdit, QMessageBox, QHBoxLayout
 from PyQt5.QtCore import pyqtSlot, QTimer
+from scipy.signal import find_peaks
 from silx.gui.data.NumpyAxesSelector import NumpyAxesSelector
 from silx.gui.fit import FitWidget
 from silx.gui.plot import Plot1D
 from silx.math.fit.functions import sum_gauss, sum_lorentz, sum_pvoigt
+from statistics import mean
 
 from src.constants import DataPath, FittingCurves
 from src.utils.dataViewers import RawDataViewer, UnfoldedDataViewer
@@ -185,6 +187,12 @@ class XpadVisualisation(QWidget):
         self.diagram_data_plot.setGraphTitle(f"Diagram diffraction of {self.path.split('/')[-1]}")
         for index, curve in enumerate(self.diagram_data_array):
             if index not in images_to_remove:
+                peaks, _ = find_peaks(curve[1], threshold=2, distance=1, prominence=1)
+                for peak_index, peak in enumerate(peaks):
+                    assymptote_x = [curve[0][peak]] * 2
+                    assymptote_y = self.diagram_data_plot.getGraphYLimits()
+                    self.diagram_data_plot.addCurve(assymptote_x, assymptote_y, f'Peak {peak_index} of image {index}')
+
                 self.diagram_data_plot.addCurve(curve[0], curve[1], f'Data of image {index}', color="#0000FF", replace=False)
 
     def fitting_curve(self):
