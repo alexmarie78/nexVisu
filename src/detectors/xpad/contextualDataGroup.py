@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QLabel, QPushButton, QGridLayout, QGroupBox, QLineEdit, QComboBox, QMessageBox, QWidget, \
-    QVBoxLayout, QHBoxLayout
+    QVBoxLayout, QHBoxLayout, QCheckBox
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import pyqtSignal
 
@@ -60,6 +60,9 @@ class ContextualDataGroup(QGroupBox):
         self.distance_widget.layout.addWidget(self.distance_label)
         self.distance_widget.layout.addWidget(self.distance_output)
 
+        self.checkBox = QCheckBox("Tick this box if you want to use median filter to process data")
+        self.checkBox.stateChanged.connect(self.set_contextual_data)
+
         self.scan_title = QLabel("Scan n° : ")
         self.scan_title.setFont(font)
         self.scan_label = QLabel("Click on the button to search for the scan you want")
@@ -80,9 +83,10 @@ class ContextualDataGroup(QGroupBox):
         #self.grid_layout.addWidget(self.distance_label, 5, 0)
         #self.grid_layout.addWidget(self.distance_output, 5, 2)
         self.grid_layout.addWidget(self.distance_widget, 5, 0)
-        self.grid_layout.addWidget(self.scan_title, 6, 0, 1, 2)
-        self.grid_layout.addWidget(self.scan_label, 7, 0)
-        self.grid_layout.addWidget(self.scan_button, 7, 1)
+        self.grid_layout.addWidget(self.checkBox, 6, 0)
+        self.grid_layout.addWidget(self.scan_title, 7, 0, 1, 2)
+        self.grid_layout.addWidget(self.scan_label, 8, 0)
+        self.grid_layout.addWidget(self.scan_button, 8, 1)
 
         self.read_calibration()
 
@@ -108,6 +112,7 @@ class ContextualDataGroup(QGroupBox):
             self.contextual_data["delta_position"] = float(self.delta_tab_input.inner_widget.layout().itemAt(0).widget().text())
             self.contextual_data["gamma_position"] = float(self.gamma_tab_input.inner_widget.layout().itemAt(0).widget().text())
             self.contextual_data["distance"] = float(self.distance_output.text())
+            self.contextual_data["median_filter"] = self.checkBox.isChecked()
             self.test_send_data()
         except ValueError:
             pass

@@ -1,3 +1,5 @@
+from scipy import ndimage
+
 from src.constants import DataPath, MetadataPath
 from h5py import File
 from PyQt5.QtWidgets import QMessageBox, QProgressBar, QApplication
@@ -149,13 +151,13 @@ def compute_geometry(contextual_data: dict, flat_image: numpy.ndarray, images: n
         "new_x_array": new_x_array,
         "new_x_ifactor_array": new_x_ifactor_array,
         "flat_image_inv": flat_image_inv,
-        "between_chips" : between_chips
+        "between_chips": between_chips
     }
 
     return geometry
 
 
-def correct_and_unfold_data(geometry: dict, image: numpy.ndarray, delta: float, gamma: float):
+def correct_and_unfold_data(geometry: dict, image: numpy.ndarray, delta: float, gamma: float, median_filter_flag=False):
     # extracting the XY coordinates for the rest of the scan transformation
     # ========psiAve = 1, deltaPsi = 1=============================================
 
@@ -218,7 +220,8 @@ def correct_and_unfold_data(geometry: dict, image: numpy.ndarray, delta: float, 
 
     # dealing now with the intensitiespointIndex
     this_image = geometry["flat_image_inv"] * image
-    # this_image = ndimage.median_filter(this_image, size=3)
+    if median_filter_flag:
+        this_image = ndimage.median_filter(this_image, size=3)
 
     this_corrected_image = numpy.zeros((geometry["image_corr1_size_y"], geometry["image_corr1_size_x"]))
     intensity_factor = geometry["new_x_ifactor_array"]  # x

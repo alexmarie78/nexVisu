@@ -133,6 +133,7 @@ class XpadVisualisation(QWidget):
             if self.scatter_factor <= 0:
                 self.scatter_factor = 1
             # Create geometry of the detector
+            self.median_filter = calibration["median_filter"]
             self.geometry = compute_geometry(calibration, self.flatfield_image, self.raw_data)
             # Collect the angles
             self.delta_array, self.gamma_array = get_angles(self.path)
@@ -152,7 +153,7 @@ class XpadVisualisation(QWidget):
             delta = self.delta_array[index] if len(self.delta_array) > 1 else self.delta_array[0]
             gamma = self.gamma_array[index] if len(self.gamma_array) > 1 else self.gamma_array[0]
             # Correct and unfold raw data
-            unfolded_data = correct_and_unfold_data(self.geometry, image, delta, gamma)
+            unfolded_data = correct_and_unfold_data(self.geometry, image, delta, gamma, self.median_filter)
             self.diagram_data_array.append(extract_diffraction_diagram(unfolded_data[0],
                                                                        unfolded_data[1],
                                                                        unfolded_data[2],
