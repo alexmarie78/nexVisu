@@ -200,12 +200,13 @@ class XpadVisualisation(QWidget):
             self.clear_fitting_widget()
             curve = self.diagram_data_array[self.fitting_data_selector.selection()[0]]
             self.fitting_data_widget.setData(curve[0], curve[1])
-            self.fitting_data_plot.addCurve(curve[0], curve[1])
+            self.fitting_data_plot.addCurve(curve[0], curve[1], symbol='o')
             self.set_graph_limits(curve)
 
     def clear_fitting_widget(self):
         self.fitting_data_widget.setData(None, None, None)
         self.fitting_data_plot.clear()
+        self.fitting_data_plot.clearMarkers()
 
     def plot_fitting_result(self, event: dict):
         if event['event'] == 'FitFinished':
