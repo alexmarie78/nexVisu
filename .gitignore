@@ -133,5 +133,13 @@ dmypy.json
 #*#
 */#*#
 
+# pyCharm files
+/.idea
+
+# processed data
+saved_data/
+src/calibration.json
+
 # Personal files
 TODO.txt
+TODO_SOLEIL.txt

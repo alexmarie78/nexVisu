@@ -1,4 +1,6 @@
 from h5py import File
+from pathlib import Path
+from PIL import Image
 from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QInputDialog, QLineEdit, QMessageBox, QHBoxLayout
 from PyQt5.QtCore import pyqtSlot, QTimer
 from scipy.signal import find_peaks
@@ -134,6 +136,7 @@ class XpadVisualisation(QWidget):
                 self.scatter_factor = 1
             # Create geometry of the detector
             self.median_filter = calibration["median_filter"]
+            self.save_data = calibration["save_unfolded_data"]
             self.geometry = compute_geometry(calibration, self.flatfield_image, self.raw_data)
             # Collect the angles
             self.delta_array, self.gamma_array = get_angles(self.path)
@@ -164,6 +167,8 @@ class XpadVisualisation(QWidget):
 
             # Add the unfolded image to the scatter stack of image.
             self.unfolded_data_viewer.add_scatter(unfolded_data, self.scatter_factor)
+            if self.save_data:
+                self.save_unfolded_data(unfolded_data, index, "../saved_data")
 
             print(f"Unfolded the image number {index} in {self.path} scan")
         except StopIteration:
@@ -244,3 +249,20 @@ class XpadVisualisation(QWidget):
         self.fitting_data_plot.setLimits(curve[0][index_x_min],
                                          curve[0][index_x_max],
                                          index_y_min, index_y_max)
+
+    def save_unfolded_data(self, image: numpy.ndarray, index: int, path: str):
+        print("hello")
+        Path(path).mkdir(parents=True, exist_ok=True)
+        xyz_line = ""
+        for i in range(len(image[0])):
+            xyz_line += ""+str(image[0][i])+" "+str(image[0][i])+" "+str(image[0][i])+"\n"
+
+        xyz_log_filename = f"raw_{index}.txt"  # modifier cette valeur selon le découpage...
+        with open(path + "/" + xyz_log_filename, "a") as saveFile:
+            saveFile.write(xyz_line)
+        """
+        image = numpy.asarray((image[0], image[1])) #image[2]))
+        im = Image.fromarray(image)
+        im = im.convert('RGB')
+        im.save(path + f"/image_{index}.png", "PNG")
+        """

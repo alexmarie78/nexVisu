@@ -60,8 +60,12 @@ class ContextualDataGroup(QGroupBox):
         self.distance_widget.layout.addWidget(self.distance_label)
         self.distance_widget.layout.addWidget(self.distance_output)
 
-        self.checkBox = QCheckBox("Tick this box if you want to use median filter to process data")
-        self.checkBox.stateChanged.connect(self.set_contextual_data)
+        self.median_filter_check = QCheckBox("Tick this box if you want to use median filter to process data")
+        self.median_filter_check.stateChanged.connect(self.set_contextual_data)
+
+        self.save_unfoldded_data_check = QCheckBox("Tick this box if you want to save unfolded data")
+        self.save_unfoldded_data_check.setChecked(True)
+        self.save_unfoldded_data_check.stateChanged.connect(self.set_contextual_data)
 
         self.scan_title = QLabel("Scan n° : ")
         self.scan_title.setFont(font)
@@ -83,7 +87,8 @@ class ContextualDataGroup(QGroupBox):
         #self.grid_layout.addWidget(self.distance_label, 5, 0)
         #self.grid_layout.addWidget(self.distance_output, 5, 2)
         self.grid_layout.addWidget(self.distance_widget, 5, 0)
-        self.grid_layout.addWidget(self.checkBox, 6, 0)
+        self.grid_layout.addWidget(self.median_filter_check, 6, 0)
+        self.grid_layout.addWidget(self.save_unfoldded_data_check, 6, 1)
         self.grid_layout.addWidget(self.scan_title, 7, 0, 1, 2)
         self.grid_layout.addWidget(self.scan_label, 8, 0)
         self.grid_layout.addWidget(self.scan_button, 8, 1)
@@ -112,7 +117,8 @@ class ContextualDataGroup(QGroupBox):
             self.contextual_data["delta_position"] = float(self.delta_tab_input.inner_widget.layout().itemAt(0).widget().text())
             self.contextual_data["gamma_position"] = float(self.gamma_tab_input.inner_widget.layout().itemAt(0).widget().text())
             self.contextual_data["distance"] = float(self.distance_output.text())
-            self.contextual_data["median_filter"] = self.checkBox.isChecked()
+            self.contextual_data["median_filter"] = self.median_filter_check.isChecked()
+            self.contextual_data["save_unfolded_data"] = self.save_unfoldded_data_check.isChecked()
             self.test_send_data()
         except ValueError:
             pass
