@@ -1,12 +1,12 @@
 from h5py import File
 from pathlib import Path
-from PIL import Image
 from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QInputDialog, QLineEdit, QMessageBox, QHBoxLayout
 from PyQt5.QtCore import pyqtSlot, QTimer
 from scipy.signal import find_peaks
+from silx.gui.colors import Colormap
 from silx.gui.data.NumpyAxesSelector import NumpyAxesSelector
 from silx.gui.fit import FitWidget
-from silx.gui.plot import Plot1D
+from silx.gui.plot import Plot1D, ScatterView
 from silx.math.fit.functions import sum_gauss, sum_lorentz, sum_pvoigt
 from statistics import mean
 
@@ -14,6 +14,7 @@ from src.constants import DataPath, FittingCurves
 from src.utils.dataViewers import RawDataViewer, UnfoldedDataViewer
 from src.utils.imageProcessing import compute_geometry, correct_and_unfold_data, get_angles, extract_diffraction_diagram
 from src.utils.nexusNavigation import get_dataset
+from src.utils.progressWidget import ProgressWidget
 
 import numpy
 import os
@@ -144,7 +145,7 @@ class XpadVisualisation(QWidget):
             # Populate the iterators that will help running the unfolding of data
             self.data_iterator = iter([image for image in self.raw_data])
             self.index_iterator = iter([i for i in range(self.raw_data.shape[0])])
-
+            self.progress = ProgressWidget('Unfolding data', self.raw_data.shape[0])
             # Start the timer and the unfolding
             self.unfold_timer.start()
             self.is_unfolding = True
@@ -169,11 +170,14 @@ class XpadVisualisation(QWidget):
             self.unfolded_data_viewer.add_scatter(unfolded_data, self.scatter_factor)
             if self.save_data:
                 self.save_unfolded_data(unfolded_data, index, "../saved_data")
-
+            self.progress.increase_progress()
             print(f"Unfolded the image number {index} in {self.path} scan")
+
         except StopIteration:
             self.unfold_timer.stop()
             self.is_unfolding = False
+            self.progress.deleteLater()
+            self.progress = None
             self.plot_diagram([0, 1])
             self.fitting_data_selector.selectionChanged.emit()
 
@@ -251,15 +255,22 @@ class XpadVisualisation(QWidget):
                                          index_y_min, index_y_max)
 
     def save_unfolded_data(self, image: numpy.ndarray, index: int, path: str):
-        print("hello")
         Path(path).mkdir(parents=True, exist_ok=True)
         xyz_line = ""
         for i in range(len(image[0])):
-            xyz_line += ""+str(image[0][i])+" "+str(image[0][i])+" "+str(image[0][i])+"\n"
+            xyz_line += ""+str(image[0][i])+" "+str(image[1][i])+" "+str(image[2][i])+"\n"
 
         xyz_log_filename = f"raw_{index}.txt"  # modifier cette valeur selon le découpage...
-        with open(path + "/" + xyz_log_filename, "a") as saveFile:
+        with open(path + "/" + xyz_log_filename, "w") as saveFile:
             saveFile.write(xyz_line)
+
+        if not hasattr(self, 'plot_test'):
+            self.plot_test = ScatterView()
+            self.plot_test.setData(image[0], image[1], image[2])
+            colormap = Colormap('viridis', normalization='log')
+            self.plot_test.setColormap(colormap)
+            self.plot_test.show()
+
         """
         image = numpy.asarray((image[0], image[1])) #image[2]))
         im = Image.fromarray(image)
