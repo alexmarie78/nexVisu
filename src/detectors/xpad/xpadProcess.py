@@ -79,21 +79,14 @@ class XpadVisualisation(QWidget):
 
         # Create fitting curve tab
         self.fitting_data_tab.layout = QVBoxLayout(self.fitting_data_tab)
-        self.fitting_data_widget = FitWidget(self.fitting_data_tab)
         self.fitting_data_selector = NumpyAxesSelector(self.fitting_data_tab)
         self.fitting_data_selector.setNamedAxesSelectorVisibility(False)
         self.fitting_data_selector.setVisible(True)
         self.fitting_data_selector.setAxisNames("12")
         self.fitting_data_plot = Plot1D(self.fitting_data_tab)
         self.fitting_data_plot.setYAxisLogarithmic(True)
-        # Set the curves marker to points
-        # self.fitting_data_plot.set
 
-        self.fitting_data_widget_bis = QWidget()
-        self.fitting_data_widget_bis.layout = QHBoxLayout(self.fitting_data_widget_bis)
-        self.fitting_data_widget_bis.layout.addWidget(self.fitting_data_widget)
-        self.fitting_data_widget_bis.layout.addWidget(self.fitting_data_plot)
-        self.fitting_data_tab.layout.addWidget(self.fitting_data_widget_bis)
+        self.fitting_data_tab.layout.addWidget(self.fitting_data_plot)
         self.fitting_data_tab.layout.addWidget(self.fitting_data_selector)
 
 
@@ -102,7 +95,7 @@ class XpadVisualisation(QWidget):
 
         self.unfold_timer.timeout.connect(self.unfold_data)
         self.fitting_data_selector.selectionChanged.connect(self.fitting_curve)
-        self.fitting_data_widget.sigFitWidgetSignal.connect(self.plot_fitting_result)
+        self.fitting_data_plot.getCurvesRoiWidget().sigROIWidgetSignal.connect(self.test)
         self.unfolded_data_viewer.scatter_selector.selectionChanged.connect(self.synchronize_visualisation)
 
     @pyqtSlot()
@@ -207,41 +200,21 @@ class XpadVisualisation(QWidget):
 
     def fitting_curve(self):
         if len(self.diagram_data_array) > 0:
-            self.clear_fitting_widget()
+            self.clear_plot_fitting_widget()
             curve = self.diagram_data_array[self.fitting_data_selector.selection()[0]]
-            self.fitting_data_widget.setData(curve[0], curve[1])
             self.fitting_data_plot.addCurve(curve[0], curve[1], symbol='o')
             self.set_graph_limits(curve)
 
-    def clear_fitting_widget(self):
-        self.fitting_data_widget.setData(None, None, None)
+    def test(self, events: dict):
+        self.ROI = list(events["roilist"])
+        self.ROI[1].sigChanged.connect(self.test2)
+
+    def test2(self):
+        print(self.ROI[1].getFrom(), self.ROI[1].getTo())
+
+    def clear_plot_fitting_widget(self):
         self.fitting_data_plot.clear()
         self.fitting_data_plot.clearMarkers()
-
-    def plot_fitting_result(self, event: dict):
-        if event['event'] == 'FitFinished':
-            params = self.fitting_data_widget.fitmanager.get_fitted_parameters()
-            for index in range(len(event['data'])//3):
-                _dict = event['data'][index * 3:(index + 1) * 3]
-                x_min = int(numpy.floor(float(_dict[0]['xmin'])))
-                x_max = int(numpy.ceil(float(_dict[0]['xmax'])))
-                x_array = numpy.linspace(x_min, x_max, 2000)
-                height, center, fwhm = params[index * 3: (index + 1) * 3]
-                print(height, center, fwhm)
-                y_array = self.fit_func(x_array, height, center, fwhm)
-                print(x_array, y_array)
-                self.fitting_data_plot.addCurve(x_array, y_array, f"Fitted curve for peak {index}")
-                self.set_graph_limits(self.diagram_data_array[self.fitting_data_selector.selection()[0]])
-
-    def fit_func(self, x_array, height, center, fwhm, backgr=None):
-        if self.fitting_data_widget.guiConfig.FunComBox.currentText() == "Gaussians":
-            return sum_gauss(x_array, height, center, fwhm)
-        if self.fitting_data_widget.guiConfig.FunComBox.currentText() == "Lorentz":
-            return sum_lorentz(x_array, height, center, fwhm)
-        """
-        if self.fitting_data_widget.guiConfig.FunComBox.currentText() == "Pseudo-Voigt Line":
-            return sum_pvoigt(x_array, height, center, fwhm)
-        """
 
     def set_graph_limits(self, curve):
         indexes_not_nan = numpy.where(numpy.logical_and(~numpy.isnan(curve[1]), ~numpy.isinf(curve[1])))[0]
@@ -263,13 +236,6 @@ class XpadVisualisation(QWidget):
         xyz_log_filename = f"raw_{index}.txt"  # modifier cette valeur selon le découpage...
         with open(path + "/" + xyz_log_filename, "w") as saveFile:
             saveFile.write(xyz_line)
-
-        if not hasattr(self, 'plot_test'):
-            self.plot_test = ScatterView()
-            self.plot_test.setData(image[0], image[1], image[2])
-            colormap = Colormap('viridis', normalization='log')
-            self.plot_test.setColormap(colormap)
-            self.plot_test.show()
 
         """
         image = numpy.asarray((image[0], image[1])) #image[2]))
