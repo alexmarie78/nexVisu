@@ -1,20 +1,18 @@
 from h5py import File
 from pathlib import Path
-from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QInputDialog, QLineEdit, QMessageBox, QHBoxLayout
+from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QInputDialog, QLineEdit, QMessageBox, QToolBar
 from PyQt5.QtCore import pyqtSlot, QTimer
 from scipy.signal import find_peaks
-from silx.gui.colors import Colormap
 from silx.gui.data.NumpyAxesSelector import NumpyAxesSelector
-from silx.gui.fit import FitWidget
-from silx.gui.plot import Plot1D, ScatterView
-from silx.math.fit.functions import sum_gauss, sum_lorentz, sum_pvoigt
-from statistics import mean
+from silx.gui.plot import Plot1D
 
-from src.constants import DataPath, FittingCurves
+from src.constants import DataPath
 from src.utils.dataViewers import RawDataViewer, UnfoldedDataViewer
+from src.utils.fitAction import FitAction
 from src.utils.imageProcessing import compute_geometry, correct_and_unfold_data, get_angles, extract_diffraction_diagram
 from src.utils.nexusNavigation import get_dataset
 from src.utils.progressWidget import ProgressWidget
+
 
 import numpy
 import os
@@ -85,7 +83,16 @@ class XpadVisualisation(QWidget):
         self.fitting_data_selector.setAxisNames("12")
         self.fitting_data_plot = Plot1D(self.fitting_data_tab)
         self.fitting_data_plot.setYAxisLogarithmic(True)
+        self.fitting_widget = self.fitting_data_plot.getFitAction()
+        self.fitting_data_plot.getRoiAction().trigger()
+        self.fitting_widget.setXRangeUpdatedOnZoom(False)
+        self.fitting_widget.toggled.connect(self.use_roi_fitting_data)
 
+        self.fit_action = FitAction(plot=self.fitting_data_plot, parent=self.fitting_data_plot)
+        self.toolbar = QToolBar("New")
+        self.toolbar.addAction(self.fit_action)
+        self.fit_action.setVisible(True)
+        self.fitting_data_plot.addToolBar(self.toolbar)
         self.fitting_data_tab.layout.addWidget(self.fitting_data_plot)
         self.fitting_data_tab.layout.addWidget(self.fitting_data_selector)
 
@@ -95,7 +102,7 @@ class XpadVisualisation(QWidget):
 
         self.unfold_timer.timeout.connect(self.unfold_data)
         self.fitting_data_selector.selectionChanged.connect(self.fitting_curve)
-        self.fitting_data_plot.getCurvesRoiWidget().sigROIWidgetSignal.connect(self.test)
+        self.fitting_data_plot.getCurvesRoiWidget().sigROIWidgetSignal.connect(self.get_roi_list)
         self.unfolded_data_viewer.scatter_selector.selectionChanged.connect(self.synchronize_visualisation)
 
     @pyqtSlot()
@@ -119,8 +126,8 @@ class XpadVisualisation(QWidget):
             self.reset_unfolding()
 
         self.scatter_factor, _ = QInputDialog.getInt(self, "You ran unfolding data process",
-                                                  "Choose a factor to speed the scatter",
-                                                  QLineEdit.Normal)
+                                                     "Choose a factor to speed the scatter",
+                                                     QLineEdit.Normal)
 
         if not isinstance(self.scatter_factor, int):
             QMessageBox(QMessageBox.Icon.Critical, "Can't send contextual data",
@@ -205,12 +212,24 @@ class XpadVisualisation(QWidget):
             self.fitting_data_plot.addCurve(curve[0], curve[1], symbol='o')
             self.set_graph_limits(curve)
 
-    def test(self, events: dict):
-        self.ROI = list(events["roilist"])
-        self.ROI[1].sigChanged.connect(self.test2)
+    def get_roi_list(self, events: dict):
+        self.rois_list = list(events["roilist"])
 
-    def test2(self):
-        print(self.ROI[1].getFrom(), self.ROI[1].getTo())
+    def use_roi_fitting_data(self):
+        if hasattr(self, 'rois_list'):
+            if self.rois_list[1]:
+                print(self.rois_list[1].getFrom(), self.rois_list[1].getTo())
+                x, y, _, _ = self.fitting_data_plot.getCurve().getData()
+                new_x = []
+                new_y = []
+                for x_coord, y_coord in zip(x, y):
+                    if self.rois_list[1].getFrom() < x_coord < self.rois_list[1].getTo():
+                        new_x.append(x_coord)
+                        new_y.append(y_coord)
+                self.fitting_widget._setXRange(min(new_x), max(new_x))
+                self.fitting_widget.setText(f"Fitting curve from {min(new_x)} to {max(new_x)}")
+        else:
+            pass
 
     def clear_plot_fitting_widget(self):
         self.fitting_data_plot.clear()
