@@ -2,6 +2,7 @@ from __future__ import division
 
 import logging
 import numpy
+from PyQt5.QtWidgets import QMessageBox
 
 from scipy import integrate
 
@@ -43,6 +44,29 @@ def _getUniqueCurveOrHistogram(plot):
         return curves[0]
     else:
         return None
+
+
+def getRoi(plot):
+    curve = plot.getActiveCurve()
+    new_curve = None
+    for roi in plot.getCurvesRoiWidget().getRois():
+        if not roi == "ICR":
+            new_curve = items.Curve()
+            roi = plot.getCurvesRoiWidget().getRois()[roi]
+            if curve is not None:
+                x = []
+                y = []
+                for index, value in enumerate(curve[0]):
+                    if roi.getFrom() <= value <= roi.getTo():
+                        x.append(curve[0][index])
+                        y.append(curve[1][index])
+                new_curve.setData(x, y)
+            else:
+                new_curve = None
+    if new_curve is not None:
+        return new_curve
+    else:
+        return curve
 
 
 class FitAction(PlotToolAction):
@@ -112,29 +136,11 @@ class FitAction(PlotToolAction):
             _logger.error("No associated PlotWidget")
             return
 
-        item = _getUniqueCurveOrHistogram(plot)
-        """
-        if item is None:
-            # ambiguous case, we need to ask which plot item to fit
-            isd = ItemsSelectionDialog(parent=plot, plot=plot)
-            isd.setWindowTitle("Select item to be fitted")
-            isd.setItemsSelectionMode(qt.QTableWidget.SingleSelection)
-            isd.setAvailableKinds(["curve", "histogram"])
-            isd.selectAllKinds()
-        
-            if not isd.exec_():  # Cancel
-                self._getToolWindow().setVisible(False)
-            else:
-                selectedItems = isd.getSelectedItems()
-                item = selectedItems[0] if len(selectedItems) == 1 else None
-        """
+        item = getRoi(plot)
 
         self._setXRange(*plot.getXAxis().getLimits())
         self._setFittedItem(item)
         self.setXRangeUpdatedOnZoom(False)
-        if item is not None:
-            xdata = item.getXData()
-            self._setXRange(min(xdata), max(xdata))
 
     def __updateFitWidget(self):
         """Update the data/range used by the FitWidget"""
@@ -143,6 +149,7 @@ class FitAction(PlotToolAction):
         item = self._getFittedItem()
         xdata = self.getXData(copy=False)
         ydata = self.getYData(copy=False)
+
         if item is None or xdata is None or ydata is None:
             fitWidget.setData(y=None)
             fitWidget.setWindowTitle("No curve selected")
@@ -258,6 +265,7 @@ class FitAction(PlotToolAction):
             self.__y = item.getYData(copy=False)
 
         self.__item = item
+
         self.__updateFitWidget()
 
     def __activeCurveChanged(self, previous, current):
@@ -266,7 +274,7 @@ class FitAction(PlotToolAction):
         if current is None:
             self._setFittedItem(None)
         else:
-            item = self.plot.getCurve(current)
+            item = getRoi(self.plot)
             self._setFittedItem(item)
 
     def __setFittedItemAutoUpdateEnabled(self, enabled):
@@ -279,7 +287,8 @@ class FitAction(PlotToolAction):
             return
 
         if enabled:
-            self._setFittedItem(plot.getActiveCurve())
+            item = getRoi(self.plot)
+            self._setFittedItem(item)
             plot.sigActiveCurveChanged.connect(self.__activeCurveChanged)
 
         else:
