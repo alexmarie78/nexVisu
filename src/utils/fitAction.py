@@ -15,7 +15,7 @@ from silx.math.fit import FitManager
 _logger = logging.getLogger(__name__)
 
 
-def getRoi(plot):
+def get_roi(plot):
     curve = plot.getActiveCurve()
     new_curve = None
     for roi in plot.getCurvesRoiWidget().getRois():
@@ -67,8 +67,9 @@ class FitAction(PlotToolAction):
 
         fit = FitManager()
         fit.loadtheories(fittheories)
-        #fit.addtheory("pearson7", function=pearson7, parameters=["amplitude", "center", "sigma", "expon"])
-        fit.addtheory("pearson7", function=pearson7bg, parameters=["backgr", "slopeLin", "amplitude", "center", "fwhmLike", "exposant"])
+        # fit.addtheory("pearson7", function=pearson7, parameters=["amplitude", "center", "sigma", "expon"])
+        fit.addtheory("pearson7", function=pearson7bg,
+                      parameters=["backgr", "slopeLin", "amplitude", "center", "fwhmLike", "exposant"])
 
         window = FitWidget(parent=self.plot, fitmngr=fit)
         window.setWindowFlags(qt.Qt.Dialog)
@@ -106,7 +107,7 @@ class FitAction(PlotToolAction):
             _logger.error("No associated PlotWidget")
             return
 
-        item = getRoi(plot)
+        item = get_roi(plot)
 
         self._setXRange(*plot.getXAxis().getLimits())
         self._setFittedItem(item)
@@ -244,7 +245,7 @@ class FitAction(PlotToolAction):
         if current is None:
             self._setFittedItem(None)
         else:
-            item = getRoi(self.plot)
+            item = get_roi(self.plot)
             self._setFittedItem(item)
 
     def __setFittedItemAutoUpdateEnabled(self, enabled):
@@ -257,7 +258,7 @@ class FitAction(PlotToolAction):
             return
 
         if enabled:
-            item = getRoi(self.plot)
+            item = get_roi(self.plot)
             self._setFittedItem(item)
             plot.sigActiveCurveChanged.connect(self.__activeCurveChanged)
 
