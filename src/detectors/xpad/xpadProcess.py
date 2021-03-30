@@ -86,7 +86,6 @@ class XpadVisualisation(QWidget):
         self.fitting_widget = self.fitting_data_plot.getFitAction()
         self.fitting_data_plot.getRoiAction().trigger()
         self.fitting_widget.setXRangeUpdatedOnZoom(False)
-        self.fitting_widget.toggled.connect(self.use_roi_fitting_data)
 
         self.fit_action = FitAction(plot=self.fitting_data_plot, parent=self.fitting_data_plot)
         self.toolbar = QToolBar("New")
@@ -214,22 +213,6 @@ class XpadVisualisation(QWidget):
 
     def get_roi_list(self, events: dict):
         self.rois_list = list(events["roilist"])
-
-    def use_roi_fitting_data(self):
-        if hasattr(self, 'rois_list'):
-            if self.rois_list[1]:
-                print(self.rois_list[1].getFrom(), self.rois_list[1].getTo())
-                x, y, _, _ = self.fitting_data_plot.getCurve().getData()
-                new_x = []
-                new_y = []
-                for x_coord, y_coord in zip(x, y):
-                    if self.rois_list[1].getFrom() < x_coord < self.rois_list[1].getTo():
-                        new_x.append(x_coord)
-                        new_y.append(y_coord)
-                self.fitting_widget._setXRange(min(new_x), max(new_x))
-                self.fitting_widget.setText(f"Fitting curve from {min(new_x)} to {max(new_x)}")
-        else:
-            pass
 
     def clear_plot_fitting_widget(self):
         self.fitting_data_plot.clear()

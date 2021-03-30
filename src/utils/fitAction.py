@@ -2,48 +2,17 @@ from __future__ import division
 
 import logging
 import numpy
-from PyQt5.QtWidgets import QMessageBox
+
+from lmfit.lineshapes import pearson7
 
 from scipy import integrate
 
 from silx.gui.plot.actions.PlotToolAction import PlotToolAction
 from silx.gui.plot import items
 from silx.gui import qt
-from silx.gui.plot.ItemsSelectionDialog import ItemsSelectionDialog
 from silx.math.fit import FitManager
 
 _logger = logging.getLogger(__name__)
-
-
-def _getUniqueCurveOrHistogram(plot):
-    """Returns unique :class:`Curve` or :class:`Histogram` in a `PlotWidget`.
-    If there is an active curve, returns it, else return curve or histogram
-    only if alone in the plot.
-    :param PlotWidget plot:
-    :rtype: Union[None,~silx.gui.plot.items.Curve,~silx.gui.plot.items.Histogram]
-    """
-    curve = plot.getActiveCurve()
-    new_curve = None
-    for roi in plot.getCurvesRoiWidget().getRois():
-        if not roi == "ICR":
-            new_curve = items.Curve()
-            roi = plot.getCurvesRoiWidget().getRois()[roi]
-            if curve is not None:
-                x = []
-                y = []
-                for index, value in enumerate(curve[0]):
-                    if roi.getFrom() <= value <= roi.getTo():
-                        x.append(curve[0][index])
-                        y.append(curve[1][index])
-                new_curve.setData(x, y)
-    if new_curve is not None:
-        return new_curve
-    curves = [item for item in plot.getItems()
-              if isinstance(item, items.Curve) and item.isVisible()]
-    if len(curves) == 1:
-        return curves[0]
-    else:
-        return None
 
 
 def getRoi(plot):
@@ -98,7 +67,8 @@ class FitAction(PlotToolAction):
 
         fit = FitManager()
         fit.loadtheories(fittheories)
-        fit.addtheory("pearson7", function=pearson7, parameters=["x", "mu", "sigma", "nu"])
+        #fit.addtheory("pearson7", function=pearson7, parameters=["amplitude", "center", "sigma", "expon"])
+        fit.addtheory("pearson7", function=pearson7bg, parameters=["backgr", "slopeLin", "amplitude", "center", "fwhmLike", "exposant"])
 
         window = FitWidget(parent=self.plot, fitmngr=fit)
         window.setWindowFlags(qt.Qt.Dialog)
@@ -344,10 +314,16 @@ class FitAction(PlotToolAction):
             if fit_curve is not None:
                 fit_curve.setVisible(False)
 
-
+"""
 def pearson7(x, mu, sigma, nu):
     return (1/(((nu * (sigma**2))**-2) * beta(nu/2, 1/2))) * (1 + (1/nu) * ((x - mu)**2)/(sigma**2)) ** ((-nu + 1)/2)
 
 
 def beta(x, y):
     return integrate.quad(lambda x0, y0, t: (t**(x0-1))*((1-t)**(y0-1)), 0, 1, args=(x, y))
+"""
+
+
+def pearson7bg(x, backgr, slopeLin, amplitude, center, fwhmLike, exposant):
+    PI = numpy.pi
+    return backgr + slopeLin * x + amplitude * (1 + ((x-center) / fwhmLike) ** 2.0) ** (-exposant)
