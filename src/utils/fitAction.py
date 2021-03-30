@@ -2,10 +2,14 @@ from __future__ import division
 
 import logging
 import numpy
+
+from scipy import integrate
+
 from silx.gui.plot.actions.PlotToolAction import PlotToolAction
 from silx.gui.plot import items
 from silx.gui import qt
 from silx.gui.plot.ItemsSelectionDialog import ItemsSelectionDialog
+from silx.math.fit import FitManager
 
 _logger = logging.getLogger(__name__)
 
@@ -66,10 +70,16 @@ class FitAction(PlotToolAction):
         # import done here rather than at module level to avoid circular import
         # FitWidget -> BackgroundWidget -> PlotWindow -> actions -> fit -> FitWidget
         from silx.gui.fit.FitWidget import FitWidget
+        from silx.math.fit import fittheories
 
-        window = FitWidget(parent=self.plot)
+        fit = FitManager()
+        fit.loadtheories(fittheories)
+        fit.addtheory("pearson7", function=pearson7, parameters=["x", "mu", "sigma", "nu"])
+
+        window = FitWidget(parent=self.plot, fitmngr=fit)
         window.setWindowFlags(qt.Qt.Dialog)
         window.sigFitWidgetSignal.connect(self.handle_signal)
+
         return window
 
     def _connectPlot(self, window):
@@ -325,3 +335,10 @@ class FitAction(PlotToolAction):
             if fit_curve is not None:
                 fit_curve.setVisible(False)
 
+
+def pearson7(x, mu, sigma, nu):
+    return (1/(((nu * (sigma**2))**-2) * beta(nu/2, 1/2))) * (1 + (1/nu) * ((x - mu)**2)/(sigma**2)) ** ((-nu + 1)/2)
+
+
+def beta(x, y):
+    return integrate.quad(lambda x0, y0, t: (t**(x0-1))*((1-t)**(y0-1)), 0, 1, args=(x, y))
