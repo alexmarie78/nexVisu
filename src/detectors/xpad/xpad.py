@@ -1,5 +1,5 @@
-from src.detectors.xpad.xpadContext import DataContext
-from src.detectors.xpad.xpadProcess import XpadVisualisation
+from src.detectors.xpad.initialDataTab.xpadContext import DataContext
+from src.detectors.xpad.visualisationTab.xpadProcess import XpadVisualisation
 from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QApplication
 from PyQt5.QtCore import pyqtSlot
 

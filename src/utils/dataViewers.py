@@ -7,7 +7,8 @@ from silx.gui.data.NumpyAxesSelector import NumpyAxesSelector
 from silx.gui.plot.ScatterView import ScatterView
 from silx.gui.plot.StackView import StackView
 from silx.gui.plot.PlotActions import PlotAction
-from silx.gui.qt import QToolBar
+from silx.gui.plot.tools import PositionInfo
+from silx.gui.qt import QToolBar, Qt
 
 import numpy
 import time
@@ -86,9 +87,10 @@ class UnfoldedDataViewer(QWidget):
 
 class RawDataViewer(StackView):
     def __init__(self, parent):
-        super().__init__(parent=parent, aspectRatio=True, yinverted=True, position=True)
+        super().__init__(parent=parent, aspectRatio=True, yinverted=True)
+
         self.setColormap("viridis", autoscale=True, normalization='log')
-        self.setLabels(("images", "x (pixel)", "y (pixel)"))
+        self.setLabels(("images", "y (pixel)", "x (pixel)"))
         self.setTitleCallback(self.title)
         self.plot = self.getPlotWidget() if silx_version >= '0.13.0' else self.getPlot()
         self.plot.setYAxisInverted(True)
@@ -100,6 +102,14 @@ class RawDataViewer(StackView):
         self.action_movie = None
         self.action_pause = None
         self.action_resume = None
+
+        position = PositionInfo(plot=self.plot, converters=[('Xpixel', lambda x, y: int(x)),
+                                                            ('Ypixel', lambda x, y: int(y)),
+                                                            ('Intensity', lambda x, y:
+                                                            self.getActiveImage().getData()[int(y)][int(x)])])
+        toolbar = QToolBar()
+        toolbar.addWidget(position)
+        self.getPlotWidget().addToolBar(Qt.BottomToolBarArea, toolbar)
 
     def title(self, image_index: int):
         return f"Image number {image_index} of the stack"

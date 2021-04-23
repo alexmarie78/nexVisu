@@ -6,12 +6,12 @@ from scipy.signal import find_peaks
 from silx.gui.data.NumpyAxesSelector import NumpyAxesSelector
 from silx.gui.plot import Plot1D
 
-from src.constants import DataPath
-from src.utils.dataViewers import RawDataViewer, UnfoldedDataViewer
-from src.utils.fitAction import FitAction
-from src.utils.imageProcessing import compute_geometry, correct_and_unfold_data, get_angles, extract_diffraction_diagram
-from src.utils.nexusNavigation import get_dataset
-from src.utils.progressWidget import ProgressWidget
+from constants import DataPath
+from utils.dataViewers import RawDataViewer, UnfoldedDataViewer
+from utils.fitAction import FitAction
+from utils.imageProcessing import compute_geometry, correct_and_unfold_data, get_angles, extract_diffraction_diagram
+from utils.nexusNavigation import get_dataset
+from utils.progressWidget import ProgressWidget
 
 
 import numpy
@@ -83,6 +83,8 @@ class XpadVisualisation(QWidget):
         self.fitting_data_selector.setAxisNames("12")
         self.fitting_data_plot = Plot1D(self.fitting_data_tab)
         self.fitting_data_plot.setYAxisLogarithmic(True)
+        self.fitting_data_plot.setGraphXLabel("two-theta (°)")
+        self.fitting_data_plot.setGraphYLabel("intensity")
         self.fitting_widget = self.fitting_data_plot.getFitAction()
         self.fitting_data_plot.getRoiAction().trigger()
         self.fitting_widget.setXRangeUpdatedOnZoom(False)

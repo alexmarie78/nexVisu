@@ -5,6 +5,7 @@ from PyQt5.QtCore import pyqtSignal
 
 class LabelledInputWidget(QWidget):
     labelFilled = pyqtSignal()
+    addedRow = pyqtSignal()
 
     def __init__(self, parent, label: str, button_flag=True):
         super().__init__(parent=parent)
@@ -28,9 +29,9 @@ class LabelledInputWidget(QWidget):
         self.scrollArea.setWidget(self.inner_widget)
 
         if self.button_flag:
-            self.scrollArea.setFixedHeight(self.button.sizeHint().width())
+            self.scrollArea.setFixedHeight(self.button.sizeHint().width() * 3)
         else:
-            self.scrollArea.setFixedHeight(self.label.sizeHint().width())
+            self.scrollArea.setFixedHeight(self.label.sizeHint().width() * 3)
 
         self.init_ui()
 
@@ -41,14 +42,16 @@ class LabelledInputWidget(QWidget):
             self.layout.addWidget(self.button)
             self.button.clicked.emit()
         else:
-            self.add_row()
+            self.add_row(1)
             self.labelFilled.emit()
 
-    def add_row(self):
+    def add_row(self, mode=0):
         if self.inner_widget.layout().count() < 10:
             input_line = QLineEdit()
             input_line.editingFinished.connect(self.label_filled)
             self.inner_widget.layout().addWidget(input_line)
+            if mode == 0:
+                self.addedRow.emit()
 
     def label_filled(self):
         self.labelFilled.emit()

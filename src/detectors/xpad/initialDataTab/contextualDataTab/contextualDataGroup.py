@@ -3,8 +3,8 @@ from PyQt5.QtWidgets import QLabel, QPushButton, QGridLayout, QGroupBox, QLineEd
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import pyqtSignal
 
-from src.constants import ScanTypes
-from src.utils.labelledInputWidget import LabelledInputWidget
+from constants import ScanTypes
+from utils.labelledInputWidget import LabelledInputWidget
 
 import json
 import statistics
@@ -40,14 +40,16 @@ class ContextualDataGroup(QGroupBox):
 
         self.x_tab_input = LabelledInputWidget(self, "x (pixels) : ")
         self.x_tab_input.labelFilled.connect(self.distance_computation)
-
+        self.x_tab_input.addedRow.connect(self.synchronize_coordinates)
+		
         self.y_tab_input = LabelledInputWidget(self, "y (pixels) : ")
         self.y_tab_input.labelFilled.connect(self.distance_computation)
-
-        self.delta_tab_input = LabelledInputWidget(self, "delta (°) : ", False)
+        self.y_tab_input.addedRow.connect(self.synchronize_coordinates)
+		
+        self.delta_tab_input = LabelledInputWidget(self, "delta (°) : ")
         self.delta_tab_input.labelFilled.connect(self.distance_computation)
 
-        self.gamma_tab_input = LabelledInputWidget(self, "gamma (°) : ", False)
+        self.gamma_tab_input = LabelledInputWidget(self, "gamma (°) : ")
         self.gamma_tab_input.labelFilled.connect(self.distance_computation)
 
         self.distance_label = QLabel("number of pixel/° : ")
@@ -166,3 +168,10 @@ class ContextualDataGroup(QGroupBox):
 
     def get_x_input(self, text):
         self.x_inputs.append(float(text))
+		
+    def synchronize_coordinates(self):
+        if self.x_tab_input.input_number() < self.y_tab_input.input_number():
+            self.x_tab_input.add_row(1)
+        if self.x_tab_input.input_number() > self.y_tab_input.input_number():
+            self.y_tab_input.add_row(1)
+

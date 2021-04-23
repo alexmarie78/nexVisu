@@ -1,14 +1,17 @@
-from PyQt5.QtWidgets import QLabel, QPushButton, QGridLayout, QGroupBox, QLineEdit, QMessageBox, QProgressBar, QCheckBox, QFileDialog
+from PyQt5.QtWidgets import QLabel, QPushButton, QGridLayout, QGroupBox, QLineEdit, QMessageBox, QProgressBar, \
+    QCheckBox, QFileDialog
 from PyQt5.QtCore import pyqtSignal
 
 from silx.gui.colors import Colormap
 from silx.gui.plot import Plot2D
+from silx.gui.plot.tools import PositionInfo
+from silx.gui.qt import QToolBar, Qt
 from silx.io.nxdata import save_NXdata
 from h5py import File
 
-from src.utils.imageProcessing import gen_flatfield
-from src.utils.nexusNavigation import get_current_directory, get_dataset
-from src.constants import get_dialog_options, DataPath
+from utils.imageProcessing import gen_flatfield
+from utils.nexusNavigation import get_current_directory, get_dataset
+from constants import get_dialog_options, DataPath
 
 import numpy
 import os
@@ -50,6 +53,7 @@ class FlatfieldGroup(QGroupBox):
         self.flat_scan_progress.setVisible(False)
 
         self.flat_scan_viewer = Plot2D(self)
+
         self.flat_scan_viewer.setYAxisInverted()
         self.flat_scan_viewer.setKeepDataAspectRatio()
         self.flat_scan_viewer.setGraphTitle("Flatfield, the result of the computation of several scan")
@@ -84,22 +88,22 @@ class FlatfieldGroup(QGroupBox):
         self.grid_layout.addWidget(self.flat_scan_viewer, 4, 0, -1, -1)
 
     def generate_flatfield(self) -> None:
-        if self.flat_scan_input1.text() == "" or self.flat_scan_input2.text() == "":
+        if self.flat_scan_input1.text() == "":
             QMessageBox(QMessageBox.Icon.Critical, "Can't run a flat computation",
                         "You must select at least two scans to perfom a flatfield").exec()
         else:
-            if self.flat_scan_input1.text().split('_')[-1].split('.')[-2] == "0001":
-                first_scan = int(self.flat_scan_input1.text().split('_')[-2])
+            first_scan_number = self.get_scan_number(self.flat_scan_input1.text())
+            if self.flat_scan_input2.text() != '':
+                last_scan_number = self.get_scan_number(self.flat_scan_input2.text())
+                if first_scan_number > last_scan_number:
+                    first_scan_number, last_scan_number = last_scan_number, first_scan_number
             else:
-                first_scan = int(self.flat_scan_input1.text().split('_')[-1].split('.')[-2])
-            last_scan = int(self.flat_scan_input2.text())
-            if first_scan > last_scan:
-                first_scan, last_scan = last_scan, first_scan
+                last_scan_number = first_scan_number
             # Generate the flatfield file
             try:
-                self.result = gen_flatfield(first_scan, last_scan, self._parent.flat_scan,
+                self.result = gen_flatfield(first_scan_number, last_scan_number, self._parent.flat_scan,
                                             self.flat_scan_progress, self.application)
-                self.flatfield_output.setText(f"flatfield_{first_scan}_{last_scan}")
+                self.flatfield_output.setText(f"flatfield_{first_scan_number}_{last_scan_number}")
                 self.flat_scan_viewer.addImage(self.result)
                 # We emit the signal when the flatfield had been computed,
                 # preventing the app from crashing if the user already checked the box to use the flatfield.
@@ -158,3 +162,11 @@ class FlatfieldGroup(QGroupBox):
             self.result = data
             self.flat_scan_viewer.addImage(self.result)
             self.usingFlat.emit()
+
+    def get_scan_number(self, path):
+        if path.isnumeric():
+            return int(path)
+        path = path.partition('.')[0].partition('0001')[0]
+        if path[-1] == '_':
+           path = path.rpartition('_')[0]
+        return int(path.partition('_')[-1])

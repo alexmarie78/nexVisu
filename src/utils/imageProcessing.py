@@ -1,9 +1,9 @@
 from scipy import ndimage
 
-from src.constants import DataPath, MetadataPath
+from constants import DataPath, MetadataPath
 from h5py import File
 from PyQt5.QtWidgets import QMessageBox, QProgressBar, QApplication
-from src.utils.nexusNavigation import get_dataset
+from utils.nexusNavigation import get_dataset
 
 import numpy
 import os

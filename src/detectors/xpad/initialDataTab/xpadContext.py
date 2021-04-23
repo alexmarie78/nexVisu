@@ -1,8 +1,8 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QFileDialog
 
 from src.utils.nexusNavigation import get_current_directory
-from src.detectors.xpad.contextualDataGroup import ContextualDataGroup
-from src.detectors.xpad.flatfieldGroup import FlatfieldGroup
+from src.detectors.xpad.initialDataTab.contextualDataTab.contextualDataGroup import ContextualDataGroup
+from src.detectors.xpad.initialDataTab.flatfieldTab.flatfieldGroup import FlatfieldGroup
 from src.constants import get_dialog_options
 
 
