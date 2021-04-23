@@ -9,6 +9,8 @@ from utils.labelledInputWidget import LabelledInputWidget
 import json
 import statistics
 
+from src.detectors.xpad.initialDataTab.contextualDataTab.directBeamWidget import DirectBeamWidget
+
 
 class ContextualDataGroup(QGroupBox):
     scanLabelChanged = pyqtSignal(str)
@@ -34,23 +36,8 @@ class ContextualDataGroup(QGroupBox):
         for scan in ScanTypes:
             self.scan_type_input.addItem(scan.value)
 
-        self.direct_beam_label = QLabel("Direct Beam :")
-        self.direct_beam_label.setFont(font)
-        # direct_beam_label.setAlignment(Qt.AlignCenter)
 
-        self.x_tab_input = LabelledInputWidget(self, "x (pixels) : ")
-        self.x_tab_input.labelFilled.connect(self.distance_computation)
-        self.x_tab_input.addedRow.connect(self.synchronize_coordinates)
-		
-        self.y_tab_input = LabelledInputWidget(self, "y (pixels) : ")
-        self.y_tab_input.labelFilled.connect(self.distance_computation)
-        self.y_tab_input.addedRow.connect(self.synchronize_coordinates)
-		
-        self.delta_tab_input = LabelledInputWidget(self, "delta (°) : ")
-        self.delta_tab_input.labelFilled.connect(self.distance_computation)
-
-        self.gamma_tab_input = LabelledInputWidget(self, "gamma (°) : ")
-        self.gamma_tab_input.labelFilled.connect(self.distance_computation)
+        self.direct_beam_widget = DirectBeamWidget(self)
 
         self.distance_label = QLabel("number of pixel/° : ")
         self.distance_output = QLineEdit()
@@ -78,16 +65,8 @@ class ContextualDataGroup(QGroupBox):
 
         self.grid_layout.addWidget(self.scan_type_label, 0, 0, 1, 2)
         self.grid_layout.addWidget(self.scan_type_input, 1, 0, 1, 2)
-        self.grid_layout.addWidget(self.direct_beam_label, 2, 0, 1, 2)
+        self.grid_layout.addWidget(self.direct_beam_widget, 2, 0, 3, 2)
 
-        self.grid_layout.addWidget(self.x_tab_input, 3, 0)
-        self.grid_layout.addWidget(self.y_tab_input, 3, 1)
-        self.grid_layout.addWidget(self.delta_tab_input, 4, 0)
-        self.grid_layout.addWidget(self.gamma_tab_input, 4, 1)
-
-
-        #self.grid_layout.addWidget(self.distance_label, 5, 0)
-        #self.grid_layout.addWidget(self.distance_output, 5, 2)
         self.grid_layout.addWidget(self.distance_widget, 5, 0)
         self.grid_layout.addWidget(self.median_filter_check, 6, 0)
         self.grid_layout.addWidget(self.save_unfoldded_data_check, 6, 1)
@@ -168,10 +147,5 @@ class ContextualDataGroup(QGroupBox):
 
     def get_x_input(self, text):
         self.x_inputs.append(float(text))
-		
-    def synchronize_coordinates(self):
-        if self.x_tab_input.input_number() < self.y_tab_input.input_number():
-            self.x_tab_input.add_row(1)
-        if self.x_tab_input.input_number() > self.y_tab_input.input_number():
-            self.y_tab_input.add_row(1)
+
 
