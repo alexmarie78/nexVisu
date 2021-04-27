@@ -1,5 +1,5 @@
 from PyQt5.QtGui import QFont, QValidator
-from PyQt5.QtWidgets import QLabel, QPushButton, QLineEdit, QWidget, QGridLayout, QVBoxLayout
+from PyQt5.QtWidgets import QLabel, QPushButton, QLineEdit, QWidget, QGridLayout, QVBoxLayout, QHBoxLayout
 from PyQt5.QtCore import pyqtSignal
 
 
@@ -29,7 +29,11 @@ class DirectBeamWidget(QWidget):
         self.gamma_inputs = [QLineEdit()]
         self.gamma_inputs_list = QWidget()
 
-        # En faire des dictionnaires au lieu de listes !!!
+        self.distance_label = QLabel("number of pixel/° : ")
+        self.distance_output = QLineEdit()
+        self.distance_output.setReadOnly(True)
+        self.distance_widget = QWidget()
+
         self.input_lists = {
             '0': self.x_inputs,
             '1': self.y_inputs,
@@ -43,6 +47,7 @@ class DirectBeamWidget(QWidget):
 
         self.add_button.clicked.connect(self.add_row)
         self.remove_button.clicked.connect(self.remove_row)
+        self.labelFilled.connect(self.compute_pixels_per_degree)
         
         self.init_ui()
 
@@ -86,8 +91,35 @@ class DirectBeamWidget(QWidget):
 
         self.layout.addWidget(self.delta_inputs_list, 5, 0, 2, 2), self.layout.addWidget(self.gamma_inputs_list, 5, 2, 2, 2)
 
+        self.distance_widget.layout = QHBoxLayout(self.distance_widget)
+        self.distance_widget.layout.addWidget(self.distance_label)
+        self.distance_widget.layout.addWidget(self.distance_output)
+
+        self.layout.addWidget(self.distance_widget, 7, 0, 1, 4)
+
         # self.force_numeric()
         self.connect_labels()
+
+        self.setStyleSheet("""
+        QWidget {
+        background-color: lightgrey;
+        border-style: outset;
+        border-width: 2px;
+        border-radius: 10px;
+        border-color: beige;
+        font: bold 14px;
+        min-width: 10em;
+        padding: 6px;
+        }
+        
+        QLineEdit {
+        border: 2px solid gray; 
+        border-radius: 10px; 
+        padding: 0 8px; 
+        background: lightblue; 
+        selection-background-color: darkgray;
+        }
+        """)
 
     def add_row(self):
         if self.input_widgets[0].layout().count() < 5:
@@ -130,16 +162,47 @@ class DirectBeamWidget(QWidget):
         return self.inner_widget.layout().itemAt(index).widget().text()
 
     def get_contextual_data(self):
+        print(self.delta_inputs[0].text())
         return {
-            'x': [float(line.text()) for line in self.x_inputs if line.text().isnumeric()],
-            'y': [float(line.text()) for line in self.y_inputs if line.text().isnumeric()],
-            'delta': [float(line.text()) for line in self.delta_inputs if line.text().isnumeric()],
-            'gamma': [float(line.text()) for line in self.gamma_inputs if line.text().isnumeric()]
+            'x': [float(line.text()) for line in self.x_inputs if is_number(line.text())],
+            'y': [float(line.text()) for line in self.y_inputs if is_number(line.text())],
+            'delta': [float(line.text()) for line in self.delta_inputs if is_number(line.text())],
+            'gamma': [float(line.text()) for line in self.gamma_inputs if is_number(line.text())],
+            'distance': float(self.distance_output.text()) if is_number(self.distance_output.text()) else None
         }
 
-    # NE PAS OUBLIER DE METTRE LE CALCUL DE LA DISTANCE ET SON AFFICHAGE DANS CE WIDGET
+    def compute_pixels_per_degree(self):
+        pix_per_deg = 0
+        inputs = self.get_contextual_data()
+        number_of_inputs = len(inputs['x'])
+        print(inputs)
+        print(number_of_inputs)
+        try:
+            for index in range(1, number_of_inputs):
+                pix_per_deg += inputs['x'][index - 1] - inputs['x'][index]
+        except IndexError:
+            print('There is not enough data to compute pixels per degree')
+        try:
+            pix_per_deg /= (number_of_inputs - 1) * abs((inputs['delta'][0] - inputs['delta'][1]))
+        except IndexError:
+            print('Not enough delta data')
+            try:
+                pix_per_deg /= (number_of_inputs - 1) * abs((inputs['gamma'][0] - inputs['gamma'][1]))
+            except IndexError:
+                print('Not enough gamma data')
+        self.distance_output.setText(str(pix_per_deg))
+
+
     # S'OCCUPER DES FONCTIONS QUI VONT SAUVEGARDER OU ECRIRE LES PARAMETRES
     # GERER L'ENVOI DES DONNEES
+
+def is_number(string):
+    print(string)
+    try:
+        float(string)
+        return True
+    except ValueError:
+        return False
 
 
 class NumericValidator(QValidator):

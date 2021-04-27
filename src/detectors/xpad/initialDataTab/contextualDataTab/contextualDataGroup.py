@@ -36,18 +36,9 @@ class ContextualDataGroup(QGroupBox):
         for scan in ScanTypes:
             self.scan_type_input.addItem(scan.value)
 
-
         self.direct_beam_widget = DirectBeamWidget(self)
 
-        self.distance_label = QLabel("number of pixel/° : ")
-        self.distance_output = QLineEdit()
-        self.distance_output.setReadOnly(True)
-        self.distance_output.textChanged.connect(self.distance_computation)
-
-        self.distance_widget = QWidget()
-        self.distance_widget.layout = QHBoxLayout(self.distance_widget)
-        self.distance_widget.layout.addWidget(self.distance_label)
-        self.distance_widget.layout.addWidget(self.distance_output)
+        #self.distance_output.textChanged.connect(self.distance_computation)
 
         self.median_filter_check = QCheckBox("Tick this box if you want to use median filter to process data")
         self.median_filter_check.stateChanged.connect(self.set_contextual_data)
@@ -67,7 +58,6 @@ class ContextualDataGroup(QGroupBox):
         self.grid_layout.addWidget(self.scan_type_input, 1, 0, 1, 2)
         self.grid_layout.addWidget(self.direct_beam_widget, 2, 0, 3, 2)
 
-        self.grid_layout.addWidget(self.distance_widget, 5, 0)
         self.grid_layout.addWidget(self.median_filter_check, 6, 0)
         self.grid_layout.addWidget(self.save_unfoldded_data_check, 6, 1)
         self.grid_layout.addWidget(self.scan_title, 7, 0, 1, 2)
