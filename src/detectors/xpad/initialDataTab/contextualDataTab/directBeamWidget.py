@@ -1,3 +1,6 @@
+import json
+import os
+
 from PyQt5.QtGui import QFont, QValidator
 from PyQt5.QtWidgets import QLabel, QPushButton, QLineEdit, QWidget, QGridLayout, QVBoxLayout, QHBoxLayout
 from PyQt5.QtCore import pyqtSignal
@@ -48,7 +51,7 @@ class DirectBeamWidget(QWidget):
         self.add_button.clicked.connect(self.add_row)
         self.remove_button.clicked.connect(self.remove_row)
         self.labelFilled.connect(self.compute_pixels_per_degree)
-        
+
         self.init_ui()
 
     def init_ui(self):
@@ -63,11 +66,11 @@ class DirectBeamWidget(QWidget):
 
         self.direct_beam_label.setFont(font_title)
 
-        self.layout.addWidget(self.direct_beam_label, 0, 0, 1, 4)
+        self.layout.addWidget(self.direct_beam_label, 0, 0, 1, 6)
 
         self.x_label.setFont(font_subtitle), self.y_label.setFont(font_subtitle)
 
-        self.layout.addWidget(self.x_label, 1, 0, 1, 2), self.layout.addWidget(self.y_label, 1, 2, 1, 2)
+        self.layout.addWidget(self.x_label, 1, 0, 1, 3), self.layout.addWidget(self.y_label, 1, 3, 1, 3)
 
         self.x_inputs_list.setLayout(QVBoxLayout())
         [self.x_inputs_list.layout().addWidget(widget) for widget in self.x_inputs]
@@ -75,13 +78,13 @@ class DirectBeamWidget(QWidget):
         self.y_inputs_list.setLayout(QVBoxLayout())
         [self.y_inputs_list.layout().addWidget(widget) for widget in self.y_inputs]
 
-        self.layout.addWidget(self.x_inputs_list, 2, 0, 2, 2), self.layout.addWidget(self.y_inputs_list, 2, 2, 2, 2)
-        self.layout.addWidget(self.add_button, 3, 4, 1, 1)
+        self.layout.addWidget(self.x_inputs_list, 2, 0, 2, 3), self.layout.addWidget(self.y_inputs_list, 2, 3, 2, 3)
+        self.layout.addWidget(self.add_button, 3, 6, 2, 1)
 
         self.delta_label.setFont(font_subtitle), self.gamma_label.setFont(font_subtitle)
 
-        self.layout.addWidget(self.delta_label, 4, 0, 1, 2), self.layout.addWidget(self.gamma_label, 4, 2, 1, 2)
-        self.layout.addWidget(self.remove_button, 4, 4, 1, 1)
+        self.layout.addWidget(self.delta_label, 4, 0, 1, 3), self.layout.addWidget(self.gamma_label, 4, 3, 1, 3)
+        self.layout.addWidget(self.remove_button, 4, 6, 2, 1)
 
         self.delta_inputs_list.setLayout(QVBoxLayout())
         [self.delta_inputs_list.layout().addWidget(widget) for widget in self.delta_inputs]
@@ -89,16 +92,20 @@ class DirectBeamWidget(QWidget):
         self.gamma_inputs_list.setLayout(QVBoxLayout())
         [self.gamma_inputs_list.layout().addWidget(widget) for widget in self.gamma_inputs]
 
-        self.layout.addWidget(self.delta_inputs_list, 5, 0, 2, 2), self.layout.addWidget(self.gamma_inputs_list, 5, 2, 2, 2)
+        self.layout.addWidget(self.delta_inputs_list, 5, 0, 2, 3), self.layout.addWidget(self.gamma_inputs_list, 5, 3, 2, 3)
 
         self.distance_widget.layout = QHBoxLayout(self.distance_widget)
         self.distance_widget.layout.addWidget(self.distance_label)
         self.distance_widget.layout.addWidget(self.distance_output)
 
-        self.layout.addWidget(self.distance_widget, 7, 0, 1, 4)
+        self.layout.addWidget(self.distance_widget, 7, 0, 1, 6)
 
         # self.force_numeric()
         self.connect_labels()
+
+        calibration = read_calibration(os.path.dirname(os.path.realpath(__file__))+'\\..\\..\\..\\..\\calibration.json')
+        if calibration:
+            self.init_calibration(calibration)
 
         self.setStyleSheet("""
         QWidget {
@@ -120,6 +127,18 @@ class DirectBeamWidget(QWidget):
         selection-background-color: darkgray;
         }
         """)
+
+    def init_calibration(self, calibration):
+        for index in range(len(calibration['x'])):
+            if index > 0:
+                self.add_row()
+        for idx, input_list in enumerate(calibration.values()):
+            print(idx, input_list)
+            for index, value in enumerate(input_list):
+                if idx < 4:
+                    self.input_lists[f'{idx}'][index].setText(str(value))
+                else:
+                    self.distance_output.setText(str(value))
 
     def add_row(self):
         if self.input_widgets[0].layout().count() < 5:
@@ -162,47 +181,64 @@ class DirectBeamWidget(QWidget):
         return self.inner_widget.layout().itemAt(index).widget().text()
 
     def get_contextual_data(self):
-        print(self.delta_inputs[0].text())
         return {
             'x': [float(line.text()) for line in self.x_inputs if is_number(line.text())],
             'y': [float(line.text()) for line in self.y_inputs if is_number(line.text())],
             'delta': [float(line.text()) for line in self.delta_inputs if is_number(line.text())],
             'gamma': [float(line.text()) for line in self.gamma_inputs if is_number(line.text())],
-            'distance': float(self.distance_output.text()) if is_number(self.distance_output.text()) else None
+            'distance': [float(self.distance_output.text()) if is_number(self.distance_output.text()) else None]
         }
 
     def compute_pixels_per_degree(self):
         pix_per_deg = 0
         inputs = self.get_contextual_data()
         number_of_inputs = len(inputs['x'])
-        print(inputs)
-        print(number_of_inputs)
         try:
             for index in range(1, number_of_inputs):
                 pix_per_deg += inputs['x'][index - 1] - inputs['x'][index]
         except IndexError:
             print('There is not enough data to compute pixels per degree')
+            return
         try:
             pix_per_deg /= (number_of_inputs - 1) * abs((inputs['delta'][0] - inputs['delta'][1]))
-        except IndexError:
-            print('Not enough delta data')
+        except (ZeroDivisionError, IndexError):
+            print('No deltas, switching to gammas')
             try:
                 pix_per_deg /= (number_of_inputs - 1) * abs((inputs['gamma'][0] - inputs['gamma'][1]))
-            except IndexError:
-                print('Not enough gamma data')
+            except (ZeroDivisionError, IndexError):
+                print('No gammas either')
+                pix_per_deg /= (number_of_inputs - 1) if number_of_inputs > 1 else 1
         self.distance_output.setText(str(pix_per_deg))
+        print('Trying write in ', os.path.dirname(os.path.realpath(__file__))+'\\calibration.json')
+        write_calibration(self.get_contextual_data(), os.path.dirname(os.path.realpath(__file__))+'\\..\\..\\..\\..\\calibration.json')
 
-
-    # S'OCCUPER DES FONCTIONS QUI VONT SAUVEGARDER OU ECRIRE LES PARAMETRES
     # GERER L'ENVOI DES DONNEES
 
+
 def is_number(string):
-    print(string)
     try:
         float(string)
         return True
     except ValueError:
         return False
+
+
+def write_calibration(calibration, path):
+    try:
+        with open(path, "w") as outfile:
+            json.dump(calibration, outfile)
+        return True
+    except FileNotFoundError:
+        return False
+
+
+def read_calibration(path):
+    try:
+        with open(path, "r") as infile:
+            calibration = json.load(infile)
+        return calibration
+    except FileNotFoundError:
+        return None
 
 
 class NumericValidator(QValidator):

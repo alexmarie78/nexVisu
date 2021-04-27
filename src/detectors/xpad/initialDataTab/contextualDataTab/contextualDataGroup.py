@@ -38,8 +38,6 @@ class ContextualDataGroup(QGroupBox):
 
         self.direct_beam_widget = DirectBeamWidget(self)
 
-        #self.distance_output.textChanged.connect(self.distance_computation)
-
         self.median_filter_check = QCheckBox("Tick this box if you want to use median filter to process data")
         self.median_filter_check.stateChanged.connect(self.set_contextual_data)
 
@@ -56,13 +54,13 @@ class ContextualDataGroup(QGroupBox):
 
         self.grid_layout.addWidget(self.scan_type_label, 0, 0, 1, 2)
         self.grid_layout.addWidget(self.scan_type_input, 1, 0, 1, 2)
-        self.grid_layout.addWidget(self.direct_beam_widget, 2, 0, 3, 2)
+        self.grid_layout.addWidget(self.direct_beam_widget, 2, 0, 5, 2)
 
-        self.grid_layout.addWidget(self.median_filter_check, 6, 0)
-        self.grid_layout.addWidget(self.save_unfoldded_data_check, 6, 1)
-        self.grid_layout.addWidget(self.scan_title, 7, 0, 1, 2)
-        self.grid_layout.addWidget(self.scan_label, 8, 0)
-        self.grid_layout.addWidget(self.scan_button, 8, 1)
+        self.grid_layout.addWidget(self.median_filter_check, 7, 0, 1, 1)
+        self.grid_layout.addWidget(self.save_unfoldded_data_check, 7, 1, 1, 1)
+        self.grid_layout.addWidget(self.scan_title, 8, 0, 1, 2)
+        self.grid_layout.addWidget(self.scan_label, 9, 0, 2, 1)
+        self.grid_layout.addWidget(self.scan_button, 9, 1, 2, 1)
 
         self.read_calibration()
 
@@ -105,7 +103,7 @@ class ContextualDataGroup(QGroupBox):
         if not self.file_loaded:
             temp = self.contextual_data
             temp["file"] = self._parent.scan
-            with open('calibration.json', 'w') as outfile:
+            with open('../../../../calibration.json', 'w') as outfile:
                 json.dump(temp, outfile)
             print("Calibration saved.")
         else:
@@ -113,7 +111,7 @@ class ContextualDataGroup(QGroupBox):
 
     def read_calibration(self) -> None:
         try:
-            with open('calibration.json', 'r') as infile:
+            with open('../../../../calibration.json', 'r') as infile:
                 data = json.load(infile)
             self.x_tab_input.inner_widget.layout().itemAt(0).widget().setText(str(data["x"]))
             self.y_tab_input.inner_widget.layout().itemAt(0).widget().setText(str(data["y"]))

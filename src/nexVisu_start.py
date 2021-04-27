@@ -152,5 +152,6 @@ if __name__ == '__main__':
     QTabBar::tab:only-one {
         margin: 0; /* if there is only one tab, we don't want overlapping margins */
     }""")
+
     Window = Window(app)
     sys.exit(app.exec_())
