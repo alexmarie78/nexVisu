@@ -18,8 +18,7 @@ import os
 
 
 class FlatfieldGroup(QGroupBox):
-    usingFlat = pyqtSignal()
-    notUsingFlat = pyqtSignal()
+    computedFlat = pyqtSignal(numpy.ndarray)
 
     def __init__(self, parent, application):
         super(QGroupBox, self).__init__()
@@ -30,29 +29,41 @@ class FlatfieldGroup(QGroupBox):
         self.colormap = Colormap("viridis", normalization='log')
 
         self.flat_saved = False
-        self.init_UI()
-
-    def init_UI(self):
 
         self.load_flatfield_button = QPushButton("Load already existing flatfield")
-        self.load_flatfield_button.clicked.connect(self.load_flatfield)
 
         self.flat_scan_label1 = QLabel("Initial flat scan : ")
         self.flat_scan_input1 = QLineEdit()
-        self.flat_scan_input1.setReadOnly(True)
+
         self.flat_scan_button1 = QPushButton("Browse file for first scan")
-        self.flat_scan_button1.clicked.connect(self._parent.browse_file)
 
         self.flat_scan_label2 = QLabel("Final flat scan number :")
         self.flat_scan_input2 = QLineEdit()
 
         self.flat_scan_run = QPushButton("Run the flatfield computing")
-        self.flat_scan_run.clicked.connect(self.generate_flatfield)
 
         self.flat_scan_progress = QProgressBar(self)
-        self.flat_scan_progress.setVisible(False)
+
+        self.flatfield_label = QLabel("Flatfield name : ")
+        self.flatfield_output = QLineEdit()
+
+        self.flat_save_button = QPushButton("Save flatfield")
 
         self.flat_scan_viewer = Plot2D(self)
+
+        self.init_UI()
+
+    def init_UI(self):
+
+        self.load_flatfield_button.clicked.connect(self.load_flatfield)
+
+        self.flat_scan_input1.setReadOnly(True)
+
+        self.flat_scan_button1.clicked.connect(self._parent.browse_file)
+
+        self.flat_scan_run.clicked.connect(self.generate_flatfield)
+
+        self.flat_scan_progress.setVisible(False)
 
         self.flat_scan_viewer.setYAxisInverted()
         self.flat_scan_viewer.setKeepDataAspectRatio()
@@ -61,17 +72,16 @@ class FlatfieldGroup(QGroupBox):
         self.flat_scan_viewer.setGraphYLabel("y (pixels)")
         self.flat_scan_viewer.setDefaultColormap(self.colormap)
 
-        self.flatfield_label = QLabel("Flatfield name : ")
-        self.flatfield_output = QLineEdit()
         self.flatfield_output.setReadOnly(True)
         self.flatfield_output.textChanged.connect(self.reset_saved_flat)
 
-        self.flat_save_button = QPushButton("Save flatfield")
         self.flat_save_button.clicked.connect(self.save_flatfield)
 
+        """
         self.flat_use_box = QCheckBox("Use the flat to process images")
         self.flat_use_box.setChecked(False)
         self.flat_use_box.stateChanged.connect(self.use_flatfield)
+        """
 
         self.grid_layout.addWidget(self.flat_scan_label1, 0, 0)
         self.grid_layout.addWidget(self.flat_scan_input1, 0, 1)
@@ -84,7 +94,7 @@ class FlatfieldGroup(QGroupBox):
         self.grid_layout.addWidget(self.flatfield_label, 2, 0)
         self.grid_layout.addWidget(self.flatfield_output, 2, 1)
         self.grid_layout.addWidget(self.flat_save_button, 2, 2)
-        self.grid_layout.addWidget(self.flat_use_box, 2, 3)
+        # self.grid_layout.addWidget(self.flat_use_box, 2, 3)
         self.grid_layout.addWidget(self.flat_scan_viewer, 4, 0, -1, -1)
 
     def generate_flatfield(self) -> None:
@@ -107,7 +117,7 @@ class FlatfieldGroup(QGroupBox):
                 self.flat_scan_viewer.addImage(self.result)
                 # We emit the signal when the flatfield had been computed,
                 # preventing the app from crashing if the user already checked the box to use the flatfield.
-                self.usingFlat.emit()
+                self.computedFlat.emit(self.result)
             except TypeError:
                 QMessageBox(QMessageBox.Icon.Critical, "Can't run a flat computation",
                             "You must select scans with xpad images.").exec()
@@ -117,11 +127,13 @@ class FlatfieldGroup(QGroupBox):
     def reset_saved_flat(self) -> None:
         self.flat_saved = False
 
+    """
     def use_flatfield(self) -> None:
         if self.flat_use_box.isChecked():
             self.usingFlat.emit()
         else:
             self.notUsingFlat.emit()
+    """
 
     def save_flatfield(self) -> None:
         # If there is a flatfield calculated and it has not yet been saved.
@@ -143,10 +155,6 @@ class FlatfieldGroup(QGroupBox):
                         "You must select or compute a flatfield scan before saving it. "
                         "Or you might have already saved this flatfield").exec()
 
-    def send_flatfield(self) -> numpy.ndarray:
-        if self.flat_use_box.isChecked() and hasattr(self, "result"):
-            return self.result
-
     def load_flatfield(self):
         if hasattr(self, 'result'):
             temp = self.result
@@ -161,12 +169,12 @@ class FlatfieldGroup(QGroupBox):
                 data += get_dataset(h5file, DataPath.SAVED_IMAGE.value)
             self.result = data
             self.flat_scan_viewer.addImage(self.result)
-            self.usingFlat.emit()
+            self.computedFlat.emit(self.result)
 
     def get_scan_number(self, path):
         if path.isnumeric():
             return int(path)
         path = path.partition('.')[0].partition('0001')[0]
         if path[-1] == '_':
-           path = path.rpartition('_')[0]
+            path = path.rpartition('_')[0]
         return int(path.partition('_')[-1])

@@ -102,6 +102,7 @@ class RawDataViewer(StackView):
         self.action_movie = None
         self.action_pause = None
         self.action_resume = None
+        self.action_use_flatfield = None
 
         position = PositionInfo(plot=self.plot, converters=[('Xpixel', lambda x, y: int(x)),
                                                             ('Ypixel', lambda x, y: int(y)),
@@ -114,16 +115,18 @@ class RawDataViewer(StackView):
     def title(self, image_index: int):
         return f"Image number {image_index} of the stack"
 
-    def set_movie(self, images):
+    def set_movie(self, images, flatfield):
         if images is not None:
             self.toolbar.clear()
 
             self.action_movie = DataViewerMovie(self._plot, images.shape[0], parent=self)
             self.action_pause = PauseMovie(self._plot, self.action_movie, parent=self)
             self.action_resume = ResumeMovie(self._plot, self.action_movie, parent=self)
+            self.action_use_flatfield = UseFlatfield(self.plot, images, flatfield, parent=self)
 
             self.toolbar.addAction(self.action_movie)
             self.toolbar.addAction(self.action_pause)
+            self.toolbar.addAction(self.action_use_flatfield)
 
             self.setStack(images)
             self.setColormap("viridis", autoscale=True, normalization='log')
@@ -216,3 +219,30 @@ class ResumeMovie(PlotAction):
     def resume_movie(self) -> None:
         # Resume the movie of the stacked images movie
         self.movie.data_timer.start()
+
+
+class UseFlatfield(PlotAction):
+    def __init__(self, plot, images, flatfield, parent=None):
+        PlotAction.__init__(self,
+                            plot,
+                            icon='stats-whole-items',
+                            text='use flatfield',
+                            tooltip='use flatfield to divide raw datas',
+                            triggered=self.use_flatfield,
+                            parent=parent)
+        self.flatfield = flatfield
+        self.images = images
+        self.already_triggered = False
+
+    def use_flatfield(self):
+        if self.already_triggered or not self.flatfield:
+            self.parent().setStack(self.images)
+            self.parent().setColormap("viridis", autoscale=True, normalization='log')
+            self.already_triggered = False
+        else:
+            numpy.seterr(divide='ignore', invalid='ignore')
+            images = [image / self.flatfield for image in self.images]
+            self.parent().setStack(images)
+            self.parent().setColormap("viridis", autoscale=True, normalization='log')
+            self.already_triggered = True
+            numpy.seterr(divide='raise', invalid='raise')

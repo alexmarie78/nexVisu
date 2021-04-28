@@ -33,8 +33,7 @@ class Xpad(QWidget):
 
         self.data_context.experimental_data_tab.scanLabelChanged.connect(self.xpad_visualisation.set_data)
         self.data_context.experimental_data_tab.contextualDataEntered.connect(self.xpad_visualisation.start_unfolding_raw_data)
-        self.data_context.flatfield_tab.usingFlat.connect(self.send_flatfield_image)
-        self.data_context.flatfield_tab.notUsingFlat.connect(self.send_empty_flatfield)
+        self.data_context.flatfield_tab.computedFlat.connect(self.send_flatfield_image)
 
         # Add tabs to widget
         self.layout.addWidget(self.tabs)
@@ -45,10 +44,8 @@ class Xpad(QWidget):
         for currentQTableWidgetItem in self.tableWidget.selectedItems():
             print(currentQTableWidgetItem.row(), currentQTableWidgetItem.column(), currentQTableWidgetItem.text())
 
-    def send_flatfield_image(self) -> None:
-        self.xpad_visualisation.get_flatfield(self.data_context.flatfield_tab.send_flatfield())
+    def send_flatfield_image(self, flatfield) -> None:
+        self.xpad_visualisation.get_flatfield(flatfield)
 
-    def send_empty_flatfield(self) -> None:
-        self.xpad_visualisation.get_flatfield(None)
 
 

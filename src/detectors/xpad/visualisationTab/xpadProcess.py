@@ -35,9 +35,6 @@ class XpadVisualisation(QWidget):
         self.is_unfolding = False
         self.diagram_data_array = []
         self.angles = []
-        self.init_UI()
-
-    def init_UI(self):
 
         # Initialize tab screen
         self.tabs = QTabWidget()
@@ -45,6 +42,32 @@ class XpadVisualisation(QWidget):
         self.unfolded_data_tab = QWidget()
         self.diagram_tab = QWidget()
         self.fitting_data_tab = QWidget()
+
+        # Create raw data display tab
+        self.raw_data_tab.layout = QVBoxLayout(self.raw_data_tab)
+        self.raw_data_viewer = RawDataViewer(self.raw_data_tab)
+
+        # Create unfolded and corrected data tab
+        self.unfolded_data_tab.layout = QVBoxLayout(self.unfolded_data_tab)
+        self.unfolded_data_viewer = UnfoldedDataViewer(self.unfolded_data_tab)
+
+        # Create diagram plot data tab
+        self.diagram_tab.layout = QVBoxLayout(self.diagram_tab)
+        self.diagram_data_plot = Plot1D(self.diagram_tab)
+
+        # Create fitting curve tab
+        self.fitting_data_tab.layout = QVBoxLayout(self.fitting_data_tab)
+        self.fitting_data_selector = NumpyAxesSelector(self.fitting_data_tab)
+        self.fitting_data_plot = Plot1D(self.fitting_data_tab)
+        self.fitting_widget = self.fitting_data_plot.getFitAction()
+        self.fit_action = FitAction(plot=self.fitting_data_plot, parent=self.fitting_data_plot)
+        self.toolbar = QToolBar("New")
+
+        self.init_UI()
+
+    def init_UI(self):
+
+
         self.tabs.resize(400, 300)
 
         # Add tabs
@@ -53,21 +76,12 @@ class XpadVisualisation(QWidget):
         self.tabs.addTab(self.diagram_tab, "Diffraction diagram")
         self.tabs.addTab(self.fitting_data_tab, "Fitted data")
 
-        # Create raw data display tab
-        self.raw_data_tab.layout = QVBoxLayout(self.raw_data_tab)
-        self.raw_data_viewer = RawDataViewer(self.raw_data_tab)
         self.raw_data_tab.layout.addWidget(self.raw_data_viewer)
 
-        # Create unfolded and corrected data tab
-        self.unfolded_data_tab.layout = QVBoxLayout(self.unfolded_data_tab)
-        self.unfolded_data_viewer = UnfoldedDataViewer(self.unfolded_data_tab)
         self.unfolded_data_tab.layout.addWidget(self.unfolded_data_viewer)
 
         self.unfolded_data_viewer.show()
 
-        # Create diagram plot data tab
-        self.diagram_tab.layout = QVBoxLayout(self.diagram_tab)
-        self.diagram_data_plot = Plot1D(self.diagram_tab)
         self.diagram_tab.layout.addWidget(self.diagram_data_plot)
 
         self.diagram_data_plot.setGraphTitle(f"Diagram diffraction")
@@ -75,28 +89,22 @@ class XpadVisualisation(QWidget):
         self.diagram_data_plot.setGraphYLabel("intensity")
         self.diagram_data_plot.setYAxisLogarithmic(True)
 
-        # Create fitting curve tab
-        self.fitting_data_tab.layout = QVBoxLayout(self.fitting_data_tab)
-        self.fitting_data_selector = NumpyAxesSelector(self.fitting_data_tab)
         self.fitting_data_selector.setNamedAxesSelectorVisibility(False)
         self.fitting_data_selector.setVisible(True)
         self.fitting_data_selector.setAxisNames("12")
-        self.fitting_data_plot = Plot1D(self.fitting_data_tab)
+
         self.fitting_data_plot.setYAxisLogarithmic(True)
         self.fitting_data_plot.setGraphXLabel("two-theta (°)")
         self.fitting_data_plot.setGraphYLabel("intensity")
-        self.fitting_widget = self.fitting_data_plot.getFitAction()
+
         self.fitting_data_plot.getRoiAction().trigger()
         self.fitting_widget.setXRangeUpdatedOnZoom(False)
 
-        self.fit_action = FitAction(plot=self.fitting_data_plot, parent=self.fitting_data_plot)
-        self.toolbar = QToolBar("New")
         self.toolbar.addAction(self.fit_action)
         self.fit_action.setVisible(True)
         self.fitting_data_plot.addToolBar(self.toolbar)
         self.fitting_data_tab.layout.addWidget(self.fitting_data_plot)
         self.fitting_data_tab.layout.addWidget(self.fitting_data_selector)
-
 
         # Add tabs to widget
         self.layout.addWidget(self.tabs)
@@ -117,7 +125,7 @@ class XpadVisualisation(QWidget):
         with File(os.path.join(path), mode='r') as h5file:
             self.raw_data = get_dataset(h5file, DataPath.IMAGE_INTERPRETATION.value)[:]
         # We put the raw data in the dataviewer
-        self.raw_data_viewer.set_movie(self.raw_data)
+        self.raw_data_viewer.set_movie(self.raw_data, self.flatfield_image)
         # We allocate a number of view in the stack of unfolded data and fitting data
         self.unfolded_data_viewer.set_stack_slider(self.raw_data.shape[0])
         self.fitting_data_selector.setData(numpy.zeros((self.raw_data.shape[0], 1, 1)))
