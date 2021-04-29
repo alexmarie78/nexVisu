@@ -54,20 +54,20 @@ def gen_flatfield(first_scan: int, last_scan: int, path: str, progress: QProgres
 def compute_geometry(contextual_data: dict, flat_image: numpy.ndarray, images: numpy.ndarray):
     deg2rad = numpy.pi / 180
     inv_deg2rad = 1 / (numpy.pi / 180)
-    calib = contextual_data["distance"]  # pixels in 1 deg.76.78
+    calib = contextual_data["distance"][0]  # pixels in 1 deg.76.78
     chip_size_x = 80
     chip_size_y = 120  # chip dimension, in pixels (X = horiz, Y = vertical)
     # Corrected positions (add 3 pixels whenever cross 80 * i in X)
-    x_center_detector = contextual_data["x"] + 3 * (contextual_data["x"] // chip_size_x)
+    x_center_detector = contextual_data["x"][0] + 3 * (contextual_data["x"][0] // chip_size_x)
     # position of direct beam on xpad at (delltaOffset, gamOffset).
     # Use the 'corrected' positions (add 3 pixels whenever cross 120 in Y)
-    y_center_detector = contextual_data["y"] + 3 * (contextual_data["y"] // chip_size_y)
-    delta_position = contextual_data["delta_position"] * -1.0 # Let the user input the real (negative value) of the delta position of the detector with direct beam
+    y_center_detector = contextual_data["y"][0] + 3 * (contextual_data["y"][0] // chip_size_y)
+    delta_position = contextual_data["delta_position"][0] * -1.0 # Let the user input the real (negative value) of the delta position of the detector with direct beam
     # positions in diffracto angles for which the above values XcenDetector, YcenDetectors are reported
-    gamma_position = contextual_data["gamma_position"] * -1.0
+    gamma_position = contextual_data["gamma_position"][0] * -1.0
     number_of_modules = images.shape[1] // chip_size_y
     number_of_chips = images.shape[2] // chip_size_x  # detector dimension, XPAD S-140
-    distance = contextual_data["distance"] / numpy.tan(1.0 * deg2rad)
+    distance = contextual_data["distance"][0] / numpy.tan(1.0 * deg2rad)
     lines_to_remove_array = [0, -3]
     between_chips = [i * 80 + 3 * (i - 1) + 1 for i in range(1, 7)]
 

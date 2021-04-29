@@ -1,17 +1,18 @@
 from h5py import File
-from pathlib import Path
-from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QInputDialog, QLineEdit, QMessageBox, QToolBar
-from PyQt5.QtCore import pyqtSlot, QTimer
+
+from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QToolBar
+from PyQt5.QtCore import pyqtSlot, pyqtSignal
 from scipy.signal import find_peaks
 from silx.gui.data.NumpyAxesSelector import NumpyAxesSelector
 from silx.gui.plot import Plot1D
 
+from src.detectors.xpad.visualisationTab.unfoldingDataTab.unfoldingDataTab import UnfoldingDataTab
+
 from constants import DataPath
-from utils.dataViewers import RawDataViewer, UnfoldedDataViewer
+from utils.dataViewers import RawDataViewer
 from utils.fitAction import FitAction
 from utils.imageProcessing import compute_geometry, correct_and_unfold_data, get_angles, extract_diffraction_diagram
 from utils.nexusNavigation import get_dataset
-from utils.progressWidget import ProgressWidget
 
 
 import numpy
@@ -19,6 +20,7 @@ import os
 
 
 class XpadVisualisation(QWidget):
+    unfoldButtonClicked = pyqtSignal()
 
     def __init__(self):
         super(QWidget, self).__init__()
@@ -26,30 +28,20 @@ class XpadVisualisation(QWidget):
         self.raw_data = None
         self.flatfield_image = None
         self.path = None
-        self.data_iterator = None
-        self.index_iterator = None
-        self.unfold_timer = QTimer(self, interval=1)
-        self.gamma_array = None
-        self.delta_array = None
-        self.geometry = None
-        self.is_unfolding = False
         self.diagram_data_array = []
         self.angles = []
 
         # Initialize tab screen
         self.tabs = QTabWidget()
         self.raw_data_tab = QWidget()
-        self.unfolded_data_tab = QWidget()
+        # Create an unfolding data tab
+        self.unfolded_data_tab = UnfoldingDataTab(self)
         self.diagram_tab = QWidget()
         self.fitting_data_tab = QWidget()
 
         # Create raw data display tab
         self.raw_data_tab.layout = QVBoxLayout(self.raw_data_tab)
         self.raw_data_viewer = RawDataViewer(self.raw_data_tab)
-
-        # Create unfolded and corrected data tab
-        self.unfolded_data_tab.layout = QVBoxLayout(self.unfolded_data_tab)
-        self.unfolded_data_viewer = UnfoldedDataViewer(self.unfolded_data_tab)
 
         # Create diagram plot data tab
         self.diagram_tab.layout = QVBoxLayout(self.diagram_tab)
@@ -63,10 +55,13 @@ class XpadVisualisation(QWidget):
         self.fit_action = FitAction(plot=self.fitting_data_plot, parent=self.fitting_data_plot)
         self.toolbar = QToolBar("New")
 
+        self.unfolded_data_tab.viewer.get_unfold_with_flatfield_action().unfoldWithFlatfieldClicked.connect(self.get_calibration)
+        self.unfolded_data_tab.viewer.get_unfold_action().unfoldClicked.connect(self.get_calibration)
+        self.unfolded_data_tab.unfoldingFinished.connect(self.create_diagram_array)
+
         self.init_UI()
 
     def init_UI(self):
-
 
         self.tabs.resize(400, 300)
 
@@ -77,10 +72,6 @@ class XpadVisualisation(QWidget):
         self.tabs.addTab(self.fitting_data_tab, "Fitted data")
 
         self.raw_data_tab.layout.addWidget(self.raw_data_viewer)
-
-        self.unfolded_data_tab.layout.addWidget(self.unfolded_data_viewer)
-
-        self.unfolded_data_viewer.show()
 
         self.diagram_tab.layout.addWidget(self.diagram_data_plot)
 
@@ -109,10 +100,11 @@ class XpadVisualisation(QWidget):
         # Add tabs to widget
         self.layout.addWidget(self.tabs)
 
-        self.unfold_timer.timeout.connect(self.unfold_data)
+        # self.unfold_timer.timeout.connect(self.unfold_data)
         self.fitting_data_selector.selectionChanged.connect(self.fitting_curve)
         self.fitting_data_plot.getCurvesRoiWidget().sigROIWidgetSignal.connect(self.get_roi_list)
-        self.unfolded_data_viewer.scatter_selector.selectionChanged.connect(self.synchronize_visualisation)
+        self.unfolded_data_tab.viewer.scatter_selector.selectionChanged.connect(self.synchronize_visualisation)
+
 
     @pyqtSlot()
     def on_click(self):
@@ -126,94 +118,51 @@ class XpadVisualisation(QWidget):
             self.raw_data = get_dataset(h5file, DataPath.IMAGE_INTERPRETATION.value)[:]
         # We put the raw data in the dataviewer
         self.raw_data_viewer.set_movie(self.raw_data, self.flatfield_image)
+        self.unfolded_data_tab.images = self.raw_data
+        self.unfolded_data_tab.path = self.path
         # We allocate a number of view in the stack of unfolded data and fitting data
-        self.unfolded_data_viewer.set_stack_slider(self.raw_data.shape[0])
+        self.unfolded_data_tab.viewer.set_stack_slider(self.raw_data.shape[0])
         self.fitting_data_selector.setData(numpy.zeros((self.raw_data.shape[0], 1, 1)))
 
-    def start_unfolding_raw_data(self, calibration: dict) -> None:
-        if self.is_unfolding:
-            self.reset_unfolding()
+    def set_calibration(self, calibration):
+        self.unfolded_data_tab.calibration = calibration
+        self.unfolded_data_tab.start_unfolding()
 
-        self.scatter_factor, _ = QInputDialog.getInt(self, "You ran unfolding data process",
-                                                     "Choose a factor to speed the scatter",
-                                                     QLineEdit.Normal)
+    def get_calibration(self):
+        self.unfoldButtonClicked.emit()
 
-        if not isinstance(self.scatter_factor, int):
-            QMessageBox(QMessageBox.Icon.Critical, "Can't send contextual data",
-                        "You must enter a integer (whole number) to run the unfolding of data").exec()
-        else:
-            if self.scatter_factor <= 0:
-                self.scatter_factor = 1
-            # Create geometry of the detector
-            self.median_filter = calibration["median_filter"]
-            self.save_data = calibration["save_unfolded_data"]
-            self.geometry = compute_geometry(calibration, self.flatfield_image, self.raw_data)
-            # Collect the angles
-            self.delta_array, self.gamma_array = get_angles(self.path)
-
-            # Populate the iterators that will help running the unfolding of data
-            self.data_iterator = iter([image for image in self.raw_data])
-            self.index_iterator = iter([i for i in range(self.raw_data.shape[0])])
-            self.progress = ProgressWidget('Unfolding data', self.raw_data.shape[0])
-            # Start the timer and the unfolding
-            self.unfold_timer.start()
-            self.is_unfolding = True
-
-    def unfold_data(self):
-        try:
-            image = next(self.data_iterator)
-            index = next(self.index_iterator)
-            delta = self.delta_array[index] if len(self.delta_array) > 1 else self.delta_array[0]
-            gamma = self.gamma_array[index] if len(self.gamma_array) > 1 else self.gamma_array[0]
-            # Correct and unfold raw data
-            unfolded_data = correct_and_unfold_data(self.geometry, image, delta, gamma, self.median_filter)
-            self.diagram_data_array.append(extract_diffraction_diagram(unfolded_data[0],
-                                                                       unfolded_data[1],
-                                                                       unfolded_data[2],
-                                                                       1.0/self.geometry["calib"],
+    def create_diagram_array(self):
+        for image in self.unfolded_data_tab.viewer.get_scatter_items():
+            self.diagram_data_array.append(extract_diffraction_diagram(image[0],
+                                                                       image[1],
+                                                                       image[2],
+                                                                       1.0 / self.unfolded_data_tab.geometry["calib"],
                                                                        -100,
                                                                        100,
                                                                        patch_data_flag=True))
-
-            # Add the unfolded image to the scatter stack of image.
-            self.unfolded_data_viewer.add_scatter(unfolded_data, self.scatter_factor)
-            if self.save_data:
-                self.save_unfolded_data(unfolded_data, index, "../saved_data")
-            self.progress.increase_progress()
-            print(f"Unfolded the image number {index} in {self.path} scan")
-
-        except StopIteration:
-            self.unfold_timer.stop()
-            self.is_unfolding = False
-            self.progress.deleteLater()
-            self.progress = None
-            self.plot_diagram([0, 1])
-            self.fitting_data_selector.selectionChanged.emit()
+        self.plot_diagram([0, 1])
+        self.fitting_data_selector.selectionChanged.emit()
 
     def get_flatfield(self, flat_img: numpy.ndarray):
         self.flatfield_image = flat_img
         self.raw_data_viewer.get_action_flatfield().set_flatfield(self.flatfield_image)
-        print("Sent flatfield to action")
+        self.unfolded_data_tab.flatfield = flat_img
 
     def synchronize_visualisation(self):
         # When user change the unfolded view, it set the raw image to the same frame
-        self.raw_data_viewer.setFrameNumber(self.unfolded_data_viewer.scatter_selector.selection()[0])
-
-    def reset_unfolding(self):
-        self.is_unfolding = False
-        self.unfold_timer.stop()
-        self.unfolded_data_viewer.reset_scatter_view()
+        self.raw_data_viewer.setFrameNumber(self.unfolded_data_tab.viewer.scatter_selector.selection()[0])
 
     def plot_diagram(self, images_to_remove=[-1]):
         self.diagram_data_plot.setGraphTitle(f"Diagram diffraction of {self.path.split('/')[-1]}")
         for index, curve in enumerate(self.diagram_data_array):
             if index not in images_to_remove:
+                """
                 peaks, _ = find_peaks(curve[1], threshold=2, distance=1, prominence=1)
                 for peak_index, peak in enumerate(peaks):
                     assymptote_x = [curve[0][peak]] * 2
                     assymptote_y = self.diagram_data_plot.getGraphYLimits()
                     self.diagram_data_plot.addCurve(assymptote_x, assymptote_y, f'Peak {peak_index} of image {index}')
-
+                """
                 self.diagram_data_plot.addCurve(curve[0], curve[1], f'Data of image {index}', color="#0000FF", replace=False)
 
     def fitting_curve(self):
@@ -241,19 +190,4 @@ class XpadVisualisation(QWidget):
                                          curve[0][index_x_max],
                                          index_y_min, index_y_max)
 
-    def save_unfolded_data(self, image: numpy.ndarray, index: int, path: str):
-        Path(path).mkdir(parents=True, exist_ok=True)
-        xyz_line = ""
-        for i in range(len(image[0])):
-            xyz_line += ""+str(image[0][i])+" "+str(image[1][i])+" "+str(image[2][i])+"\n"
 
-        xyz_log_filename = f"raw_{index}.txt"  # modifier cette valeur selon le découpage...
-        with open(path + "/" + xyz_log_filename, "w") as saveFile:
-            saveFile.write(xyz_line)
-
-        """
-        image = numpy.asarray((image[0], image[1])) #image[2]))
-        im = Image.fromarray(image)
-        im = im.convert('RGB')
-        im.save(path + f"/image_{index}.png", "PNG")
-        """

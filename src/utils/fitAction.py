@@ -67,8 +67,7 @@ class FitAction(PlotToolAction):
 
         fit = FitManager()
         fit.loadtheories(fittheories)
-        #fit.addtheory("pearson7", function=pearson7, parameters=["amplitude", "center", "sigma", "expon"])
-        fit.addtheory("pearson7", function=pearson7bg, parameters=["backgr", "slopeLin", "amplitude", "center", "fwhmLike", "exposant"])
+        fit.addtheory("pearson7", function=pearson7bg, parameters=["backgr", "slopeLin", "amplitude", "center", "fwhmLike", "exposant"], configure=None)
 
         window = FitWidget(parent=self.plot, fitmngr=fit)
         window.setWindowFlags(qt.Qt.Dialog)

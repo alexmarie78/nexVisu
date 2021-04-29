@@ -184,8 +184,8 @@ class DirectBeamWidget(QWidget):
         return {
             'x': [float(line.text()) for line in self.x_inputs if is_number(line.text())],
             'y': [float(line.text()) for line in self.y_inputs if is_number(line.text())],
-            'delta': [float(line.text()) for line in self.delta_inputs if is_number(line.text())],
-            'gamma': [float(line.text()) for line in self.gamma_inputs if is_number(line.text())],
+            'delta_position': [float(line.text()) for line in self.delta_inputs if is_number(line.text())],
+            'gamma_position': [float(line.text()) for line in self.gamma_inputs if is_number(line.text())],
             'distance': [float(self.distance_output.text()) if is_number(self.distance_output.text()) else None]
         }
 

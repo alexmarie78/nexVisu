@@ -32,8 +32,9 @@ class Xpad(QWidget):
         self.tab2.layout.addWidget(self.xpad_visualisation)
 
         self.data_context.experimental_data_tab.scanLabelChanged.connect(self.xpad_visualisation.set_data)
-        self.data_context.experimental_data_tab.contextualDataEntered.connect(self.xpad_visualisation.start_unfolding_raw_data)
         self.data_context.flatfield_tab.computedFlat.connect(self.send_flatfield_image)
+
+        self.xpad_visualisation.unfoldButtonClicked.connect(self.get_contextual_data)
 
         # Add tabs to widget
         self.layout.addWidget(self.tabs)
@@ -47,5 +48,10 @@ class Xpad(QWidget):
     def send_flatfield_image(self, flatfield) -> None:
         self.xpad_visualisation.get_flatfield(flatfield)
 
+    def get_contextual_data(self):
+        calib = self.data_context.experimental_data_tab.direct_beam_widget.get_contextual_data()
+        calib["median_filter"] = self.data_context.experimental_data_tab.median_filter_check.isChecked()
+        calib["save_data"] = self.data_context.experimental_data_tab.save_unfoldded_data_check.isChecked()
+        self.xpad_visualisation.set_calibration(calib)
 
 
