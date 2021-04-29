@@ -192,6 +192,8 @@ class XpadVisualisation(QWidget):
 
     def get_flatfield(self, flat_img: numpy.ndarray):
         self.flatfield_image = flat_img
+        self.raw_data_viewer.get_action_flatfield().set_flatfield(self.flatfield_image)
+        print("Sent flatfield to action")
 
     def synchronize_visualisation(self):
         # When user change the unfolded view, it set the raw image to the same frame

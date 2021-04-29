@@ -98,11 +98,15 @@ class RawDataViewer(StackView):
         self.action_already_created = False
 
         self.toolbar = QToolBar("Custom toolbar")
-        self._plot.addToolBar(self.toolbar)
-        self.action_movie = None
-        self.action_pause = None
-        self.action_resume = None
-        self.action_use_flatfield = None
+        self.plot.addToolBar(self.toolbar)
+        self.action_movie = DataViewerMovie(self.plot, parent=self)
+        self.action_pause = PauseMovie(self.plot, self.action_movie, parent=self)
+        self.action_resume = ResumeMovie(self.plot, self.action_movie, parent=self)
+        self.action_use_flatfield = UseFlatfield(self.plot, parent=self)
+
+        self.toolbar.addAction(self.action_movie)
+        self.toolbar.addAction(self.action_pause)
+        self.toolbar.addAction(self.action_use_flatfield)
 
         position = PositionInfo(plot=self.plot, converters=[('Xpixel', lambda x, y: int(x)),
                                                             ('Ypixel', lambda x, y: int(y)),
@@ -117,16 +121,9 @@ class RawDataViewer(StackView):
 
     def set_movie(self, images, flatfield):
         if images is not None:
-            self.toolbar.clear()
-
-            self.action_movie = DataViewerMovie(self._plot, images.shape[0], parent=self)
-            self.action_pause = PauseMovie(self._plot, self.action_movie, parent=self)
-            self.action_resume = ResumeMovie(self._plot, self.action_movie, parent=self)
-            self.action_use_flatfield = UseFlatfield(self.plot, images, flatfield, parent=self)
-
-            self.toolbar.addAction(self.action_movie)
-            self.toolbar.addAction(self.action_pause)
-            self.toolbar.addAction(self.action_use_flatfield)
+            self.action_movie.set_movie_size(images.shape[0])
+            self.action_use_flatfield.set_images(images)
+            self.action_use_flatfield.set_flatfield(flatfield)
 
             self.setStack(images)
             self.setColormap("viridis", autoscale=True, normalization='log')
@@ -134,16 +131,27 @@ class RawDataViewer(StackView):
             self.action_pause.triggered.connect(self.update_pause_button)
             self.action_resume.triggered.connect(self.update_pause_button)
         else:
-            self.toolbar.clear()
             self.setStack(None)
 
     def update_pause_button(self):
-        if self.toolbar.actions()[-1] == self.action_pause:
+        if self.toolbar.actions()[-2] == self.action_pause:
             self.toolbar.removeAction(self.action_pause)
             self.toolbar.addAction(self.action_resume)
         else:
             self.toolbar.removeAction(self.action_resume)
             self.toolbar.addAction(self.action_pause)
+
+    def get_action_movie(self):
+        return self.action_movie
+
+    def get_action_pause(self):
+        return self.action_pause
+
+    def get_action_resume(self):
+        return self.action_resume
+
+    def get_action_flatfield(self):
+        return self.action_use_flatfield
 
 
 class DataViewerMovie(PlotAction):
@@ -151,7 +159,7 @@ class DataViewerMovie(PlotAction):
     :param plot: :class:`.PlotWidget` instance on which to operate
     :param parent: See :class:`QAction`
     """
-    def __init__(self, plot, nb_images, parent=None):
+    def __init__(self, plot, nb_images=0, parent=None):
         PlotAction.__init__(self,
                             plot,
                             icon='camera',
@@ -184,13 +192,16 @@ class DataViewerMovie(PlotAction):
             self.data_timer.stop()
             self.count = 0
 
+    def set_movie_size(self, size):
+        self.nb_images = size
+
 
 class PauseMovie(PlotAction):
     """QAction that  movie of the stacked images
     :param plot: :class:`.PlotWidget` instance on which to operate
     :param parent: See :class:`QAction`
     """
-    def __init__(self, plot, movie, parent=None):
+    def __init__(self, plot, movie=None, parent=None):
         PlotAction.__init__(self,
                             plot,
                             icon='item-2dim',
@@ -202,11 +213,15 @@ class PauseMovie(PlotAction):
 
     def pause_movie(self) -> None:
         # Pauses the stacked images movie
-        self.movie.data_timer.stop()
+        if self.movie.data_timer:
+            self.movie.data_timer.stop()
+
+    def set_movie(self, movie):
+        self.movie = movie
 
 
 class ResumeMovie(PlotAction):
-    def __init__(self, plot, movie, parent=None):
+    def __init__(self, plot, movie=None, parent=None):
         PlotAction.__init__(self,
                             plot,
                             icon='next',
@@ -218,11 +233,15 @@ class ResumeMovie(PlotAction):
 
     def resume_movie(self) -> None:
         # Resume the movie of the stacked images movie
-        self.movie.data_timer.start()
+        if self.movie.data_timer:
+            self.movie.data_timer.start()
+
+    def set_movie(self, movie):
+        self.movie = movie
 
 
 class UseFlatfield(PlotAction):
-    def __init__(self, plot, images, flatfield, parent=None):
+    def __init__(self, plot, images=None, flatfield=None, parent=None):
         PlotAction.__init__(self,
                             plot,
                             icon='stats-whole-items',
@@ -235,7 +254,7 @@ class UseFlatfield(PlotAction):
         self.already_triggered = False
 
     def use_flatfield(self):
-        if self.already_triggered or not self.flatfield:
+        if self.already_triggered or self.flatfield is None:
             self.parent().setStack(self.images)
             self.parent().setColormap("viridis", autoscale=True, normalization='log')
             self.already_triggered = False
@@ -246,3 +265,9 @@ class UseFlatfield(PlotAction):
             self.parent().setColormap("viridis", autoscale=True, normalization='log')
             self.already_triggered = True
             numpy.seterr(divide='raise', invalid='raise')
+
+    def set_flatfield(self, flatfield):
+        self.flatfield = flatfield
+
+    def set_images(self, images):
+        self.images = images
