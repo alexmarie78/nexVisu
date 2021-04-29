@@ -41,20 +41,25 @@ class UnfoldingDataTab(QWidget):
         self.index_iterator = None
         self.progress = None
 
+        self.use_flatfield = True
+
         self.init_ui()
 
     def init_ui(self):
         self.layout.addWidget(self.viewer)
         self.timer.timeout.connect(self.unfold_data)
 
+        self.viewer.get_unfold_action().unfoldClicked.connect(self.remove_flatfield)
+        self.viewer.get_unfold_with_flatfield_action().unfoldWithFlatfieldClicked.connect(self.add_flatfield)
+
     def start_unfolding(self):
+        self.viewer.reset_scatter_view()
         if self.is_unfolding:
             self.reset_unfolding()
 
         self.scatter_factor, _ = QInputDialog.getInt(self, "You ran unfolding data process",
                                                      "Choose a factor to speed the scatter",
                                                      QLineEdit.Normal)
-
         if not isinstance(self.scatter_factor, int):
             QMessageBox(QMessageBox.Icon.Critical, "Can't send contextual data",
                         "You must enter a integer (whole number) to run the unfolding of data").exec()
@@ -62,11 +67,12 @@ class UnfoldingDataTab(QWidget):
             if self.scatter_factor <= 0:
                 self.scatter_factor = 1
             # Create geometry of the detector
-            print(self.calibration["median_filter"])
-            print(self.calibration["save_data"])
             self.median_filter = self.calibration["median_filter"]
             self.save_data = self.calibration["save_data"]
-            self.geometry = compute_geometry(self.calibration, self.flatfield, self.images)
+            if self.use_flatfield:
+                self.geometry = compute_geometry(self.calibration, self.flatfield, self.images)
+            else:
+                self.geometry = compute_geometry(self.calibration, None, self.images)
             # Collect the angles
             self.delta_array, self.gamma_array = get_angles(self.path)
 
@@ -91,8 +97,8 @@ class UnfoldingDataTab(QWidget):
             self.viewer.add_scatter(unfolded_data, self.scatter_factor)
             if self.save_data:
                 self.save_unfolded_data(unfolded_data, index, "../saved_data")
+                print(f"Saved unfolded image number {index} of {self.path} scan in '../saved_data' path")
             self.progress.increase_progress()
-            print(f"Unfolded the image number {index} in {self.path} scan")
 
         except StopIteration:
             self.timer.stop()
@@ -104,7 +110,6 @@ class UnfoldingDataTab(QWidget):
     def reset_unfolding(self):
         self.is_unfolding = False
         self.timer.stop()
-        self.viewer.reset_scatter_view()
 
     def save_unfolded_data(self, image: numpy.ndarray, index: int, path: str):
         Path(path).mkdir(parents=True, exist_ok=True)
@@ -122,3 +127,9 @@ class UnfoldingDataTab(QWidget):
         im = im.convert('RGB')
         im.save(path + f"/image_{index}.png", "PNG")
         """
+
+    def remove_flatfield(self):
+        self.use_flatfield = False
+
+    def add_flatfield(self):
+        self.use_flatfield = True

@@ -1,3 +1,5 @@
+import math
+
 from h5py import File
 
 from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QToolBar
@@ -126,7 +128,8 @@ class XpadVisualisation(QWidget):
 
     def set_calibration(self, calibration):
         self.unfolded_data_tab.calibration = calibration
-        self.unfolded_data_tab.start_unfolding()
+        if self.unfolded_data_tab.images is not None:
+            self.unfolded_data_tab.start_unfolding()
 
     def get_calibration(self):
         self.unfoldButtonClicked.emit()
@@ -140,17 +143,8 @@ class XpadVisualisation(QWidget):
                                                                        -100,
                                                                        100,
                                                                        patch_data_flag=True))
-        self.plot_diagram([0, 1])
+        self.plot_diagram()
         self.fitting_data_selector.selectionChanged.emit()
-
-    def get_flatfield(self, flat_img: numpy.ndarray):
-        self.flatfield_image = flat_img
-        self.raw_data_viewer.get_action_flatfield().set_flatfield(self.flatfield_image)
-        self.unfolded_data_tab.flatfield = flat_img
-
-    def synchronize_visualisation(self):
-        # When user change the unfolded view, it set the raw image to the same frame
-        self.raw_data_viewer.setFrameNumber(self.unfolded_data_tab.viewer.scatter_selector.selection()[0])
 
     def plot_diagram(self, images_to_remove=[-1]):
         self.diagram_data_plot.setGraphTitle(f"Diagram diffraction of {self.path.split('/')[-1]}")
@@ -163,7 +157,17 @@ class XpadVisualisation(QWidget):
                     assymptote_y = self.diagram_data_plot.getGraphYLimits()
                     self.diagram_data_plot.addCurve(assymptote_x, assymptote_y, f'Peak {peak_index} of image {index}')
                 """
-                self.diagram_data_plot.addCurve(curve[0], curve[1], f'Data of image {index}', color="#0000FF", replace=False)
+                self.diagram_data_plot.addCurve(curve[0], curve[1], f'Data of image {index}',
+                                                color="#0000FF", replace=False, symbol='o')
+
+    def get_flatfield(self, flat_img: numpy.ndarray):
+        self.flatfield_image = flat_img
+        self.raw_data_viewer.get_action_flatfield().set_flatfield(self.flatfield_image)
+        self.unfolded_data_tab.flatfield = flat_img
+
+    def synchronize_visualisation(self):
+        # When user change the unfolded view, it set the raw image to the same frame
+        self.raw_data_viewer.setFrameNumber(self.unfolded_data_tab.viewer.scatter_selector.selection()[0])
 
     def fitting_curve(self):
         if len(self.diagram_data_array) > 0:
