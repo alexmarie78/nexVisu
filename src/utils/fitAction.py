@@ -6,6 +6,7 @@ import numpy
 from lmfit.lineshapes import pearson7
 
 from scipy import integrate
+from scipy.stats import linregress
 
 from silx.gui.plot.actions.PlotToolAction import PlotToolAction
 from silx.gui.plot import items
@@ -329,7 +330,17 @@ def pearson7bg(x, backgr, slopeLin, amplitude, center, fwhmLike, exposant):
 
 
 def estimate_pearson7(x, y):
-    params = [1.95029979e+04, -2.60909223e+03, 3.52252164e+02, 1.33957258e+01, 1.69597427e-01, 1.90484157e+00]
+    backgr = y[0]
+    slopeline, _, _, _, _ = linregress(x, y)
+    amplitude = max(y) - y[0]
+    center = numpy.where((max(y)))[0]
+    fwhmlike = numpy.mean([x for x in range(len(x)) if y[x] > max(y)/2.0])
+    exposant = 2.0
+
+    # params = [1.95029979e+04, -2.60909223e+03, 3.52252164e+02, 1.33957258e+01, 1.69597427e-01, 1.90484157e+00]
+    params = [backgr, slopeline, amplitude, center, fwhmlike, exposant]
     constraints = numpy.zeros(shape=(len(params), 3))
+    print(params)
+    print(constraints)
     return params, constraints
 

@@ -8,8 +8,8 @@ from scipy.signal import find_peaks
 from silx.gui.data.NumpyAxesSelector import NumpyAxesSelector
 from silx.gui.plot import Plot1D
 
-from src.detectors.xpad.visualisationTab.fittingDataTab.fittingDataTab import FittingDataTab
-from src.detectors.xpad.visualisationTab.unfoldingDataTab.unfoldingDataTab import UnfoldingDataTab
+from detectors.xpad.visualisationTab.fittingDataTab.fittingDataTab import FittingDataTab
+from detectors.xpad.visualisationTab.unfoldingDataTab.unfoldingDataTab import UnfoldingDataTab
 
 from constants import DataPath
 from utils.dataViewers import RawDataViewer

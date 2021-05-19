@@ -195,19 +195,20 @@ class DirectBeamWidget(QWidget):
         number_of_inputs = len(inputs['x'])
         try:
             for index in range(1, number_of_inputs):
-                pix_per_deg += inputs['x'][index - 1] - inputs['x'][index]
+                pix_per_deg += inputs['x'][index] - inputs['x'][index - 1]
         except IndexError:
             print('There is not enough data to compute pixels per degree')
             return
         try:
-            pix_per_deg /= (number_of_inputs - 1) * abs((inputs['delta'][0] - inputs['delta'][1]))
+            pix_per_deg /= (number_of_inputs - 1) * abs((inputs['delta_position'][0] - inputs['delta_position'][1]))
         except (ZeroDivisionError, IndexError):
             print('No deltas, switching to gammas')
             try:
-                pix_per_deg /= (number_of_inputs - 1) * abs((inputs['gamma'][0] - inputs['gamma'][1]))
+                pix_per_deg /= (number_of_inputs - 1) * abs((inputs['gamma_position'][0] - inputs['gamma_position'][1]))
             except (ZeroDivisionError, IndexError):
                 print('No gammas either')
                 pix_per_deg /= (number_of_inputs - 1) if number_of_inputs > 1 else 1
+        print(pix_per_deg)
         self.distance_output.setText(str(pix_per_deg))
         print('Trying write in ', os.path.dirname(os.path.realpath(__file__))+'\\calibration.json')
         write_calibration(self.get_contextual_data(), os.path.dirname(os.path.realpath(__file__))+'\\..\\..\\..\\..\\calibration.json')

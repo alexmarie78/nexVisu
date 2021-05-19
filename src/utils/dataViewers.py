@@ -2,7 +2,7 @@ from silx import version as silx_version
 from silx.gui.plot.StackView import StackView
 from silx.gui.plot.tools import PositionInfo
 from silx.gui.qt import QToolBar, Qt
-from src.utils.rawViewerActions import DataViewerMovie, PauseMovie, ResumeMovie, UseFlatfield
+from utils.rawViewerActions import DataViewerMovie, PauseMovie, ResumeMovie, UseFlatfield
 
 
 class RawDataViewer(StackView):

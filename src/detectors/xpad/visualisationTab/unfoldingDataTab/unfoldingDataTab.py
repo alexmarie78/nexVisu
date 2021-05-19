@@ -3,9 +3,9 @@ from pathlib import Path
 import numpy
 from PyQt5.QtCore import QTimer, pyqtSignal
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLineEdit, QInputDialog, QMessageBox
-from src.detectors.xpad.visualisationTab.unfoldingDataTab.unfoldingViewer import UnfoldedDataViewer
-from src.utils.imageProcessing import compute_geometry, correct_and_unfold_data, extract_diffraction_diagram, get_angles
-from src.utils.progressWidget import ProgressWidget
+from detectors.xpad.visualisationTab.unfoldingDataTab.unfoldingViewer import UnfoldedDataViewer
+from utils.imageProcessing import compute_geometry, correct_and_unfold_data, extract_diffraction_diagram, get_angles
+from utils.progressWidget import ProgressWidget
 
 
 class UnfoldingDataTab(QWidget):

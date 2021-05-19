@@ -3,7 +3,7 @@ from silx.gui.colors import Colormap
 from silx.gui.data.NumpyAxesSelector import NumpyAxesSelector
 from silx.gui.qt import QToolBar
 from silx.gui.plot.ScatterView import ScatterView
-from src.detectors.xpad.visualisationTab.unfoldingDataTab.unfoldingActions import Unfold, UnfoldWithFlatfield
+from detectors.xpad.visualisationTab.unfoldingDataTab.unfoldingActions import Unfold, UnfoldWithFlatfield
 
 import numpy
 import time

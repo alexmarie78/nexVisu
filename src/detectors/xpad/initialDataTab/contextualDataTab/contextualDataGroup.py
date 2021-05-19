@@ -1,15 +1,10 @@
-from PyQt5.QtWidgets import QLabel, QPushButton, QGridLayout, QGroupBox, QLineEdit, QComboBox, QMessageBox, QWidget, \
-    QVBoxLayout, QHBoxLayout, QCheckBox
+from PyQt5.QtWidgets import QLabel, QPushButton, QGridLayout, QGroupBox, QComboBox, QMessageBox, QCheckBox
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import pyqtSignal
 
 from constants import ScanTypes
-from utils.labelledInputWidget import LabelledInputWidget
 
-import json
-import statistics
-
-from src.detectors.xpad.initialDataTab.contextualDataTab.directBeamWidget import DirectBeamWidget
+from detectors.xpad.initialDataTab.contextualDataTab.directBeamWidget import DirectBeamWidget
 
 
 class ContextualDataGroup(QGroupBox):
