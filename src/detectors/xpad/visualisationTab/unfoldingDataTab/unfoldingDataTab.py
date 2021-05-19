@@ -57,12 +57,17 @@ class UnfoldingDataTab(QWidget):
         if self.is_unfolding:
             self.reset_unfolding()
 
-        self.scatter_factor, _ = QInputDialog.getInt(self, "You ran unfolding data process",
-                                                     "Choose a factor to speed the scatter",
-                                                     QLineEdit.Normal)
+        self.scatter_factor, validate_button = QInputDialog.getInt(self, "You ran unfolding data process",
+                                                                   "Choose a factor to speed the scatter",
+                                                                   QLineEdit.Normal)
+
         if not isinstance(self.scatter_factor, int):
+            self.reset_unfolding()
             QMessageBox(QMessageBox.Icon.Critical, "Can't send contextual data",
                         "You must enter a integer (whole number) to run the unfolding of data").exec()
+        elif not validate_button:
+            self.reset_unfolding()
+            print("Dialog killed, unfolding stopped")
         else:
             if self.scatter_factor <= 0:
                 self.scatter_factor = 1

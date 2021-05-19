@@ -8,6 +8,7 @@ from scipy.signal import find_peaks
 from silx.gui.data.NumpyAxesSelector import NumpyAxesSelector
 from silx.gui.plot import Plot1D
 
+from src.detectors.xpad.visualisationTab.fittingDataTab.fittingDataTab import FittingDataTab
 from src.detectors.xpad.visualisationTab.unfoldingDataTab.unfoldingDataTab import UnfoldingDataTab
 
 from constants import DataPath
@@ -57,6 +58,9 @@ class XpadVisualisation(QWidget):
         self.fit_action = FitAction(plot=self.fitting_data_plot, parent=self.fitting_data_plot)
         self.toolbar = QToolBar("New")
 
+        # Create automatic fitting tab
+        self.automatic_fit_tab = FittingDataTab(self)
+
         self.unfolded_data_tab.viewer.get_unfold_with_flatfield_action().unfoldWithFlatfieldClicked.connect(self.get_calibration)
         self.unfolded_data_tab.viewer.get_unfold_action().unfoldClicked.connect(self.get_calibration)
         self.unfolded_data_tab.unfoldingFinished.connect(self.create_diagram_array)
@@ -72,6 +76,7 @@ class XpadVisualisation(QWidget):
         self.tabs.addTab(self.unfolded_data_tab, "Unfolded data")
         self.tabs.addTab(self.diagram_tab, "Diffraction diagram")
         self.tabs.addTab(self.fitting_data_tab, "Fitted data")
+        self.tabs.addTab(self.automatic_fit_tab, "Automatic fit")
 
         self.raw_data_tab.layout.addWidget(self.raw_data_viewer)
 
@@ -127,9 +132,13 @@ class XpadVisualisation(QWidget):
         self.fitting_data_selector.setData(numpy.zeros((self.raw_data.shape[0], 1, 1)))
 
     def set_calibration(self, calibration):
-        self.unfolded_data_tab.calibration = calibration
-        if self.unfolded_data_tab.images is not None:
-            self.unfolded_data_tab.start_unfolding()
+        # Check if there is a empty list of coordinate in the direct beam calibration
+        if not [] in [value for value in calibration.values()]:
+            self.unfolded_data_tab.calibration = calibration
+            if self.unfolded_data_tab.images is not None:
+                self.unfolded_data_tab.start_unfolding()
+        else:
+            print("Direct beam not calibrated yet.")
 
     def get_calibration(self):
         self.unfoldButtonClicked.emit()
@@ -144,6 +153,7 @@ class XpadVisualisation(QWidget):
                                                                        100,
                                                                        patch_data_flag=True))
         self.plot_diagram()
+        self.automatic_fit_tab.set_data_to_fit(self.diagram_data_array)
         self.fitting_data_selector.selectionChanged.emit()
 
     def plot_diagram(self, images_to_remove=[-1]):

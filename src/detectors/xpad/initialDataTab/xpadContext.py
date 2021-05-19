@@ -23,32 +23,38 @@ class DataContext(QWidget):
         self.tabs.addTab(self.flatfield_tab, "Flatfield")
         self.tabs.addTab(self.calibration_with_powder_tab, "Calibration with Powder")
 
+        self.scan = None
+        self.flat_scan = None
+
         # self.generate_contextual_data_group()
         self.layout.addWidget(self.tabs)
 
     def browse_file(self) -> None:
-        if hasattr(self, "scan"):
-            temp = self.scan
-        else:
-            temp = None
         directory = get_current_directory().replace("/utils", "").replace("/nexVisu", "")
         if self.tabs.currentIndex() == 0:
-            self.scan, _ = QFileDialog.getOpenFileName(self, 'Choose the scan file you want to \
-visualize.', directory, '*.nxs', options=get_dialog_options())
-            if self.scan != "":
+            scan, validate_dialog = QFileDialog.getOpenFileName(self, 'Choose the scan file you want to visualize.',
+                                                                directory, '*.nxs', options=get_dialog_options())
+            if validate_dialog:
+                self.scan = scan
                 self.experimental_data_tab.scan_label.setText(self.scan.split('/')[-1])
                 self.experimental_data_tab.scanLabelChanged.emit(self.scan)
             else:
                 # If a scan was selected and the user kills the dialog
-                if temp is not None:
-                    self.scan = temp
+                if self.scan is not None:
                     self.experimental_data_tab.scan_label.setText(self.scan.split('/')[-1])
+                    print("Scan dialog killed, former scan used.")
                 else:
                     self.experimental_data_tab.scan_label.setText("Click on the button to search for the scan you want")
+                    print("Scan dialog killed, no scan used.")
         # Else it means user wants to chose a flatscan that will help reduce the noise in the experiment file
         else:
-            self.flat_scan, _ = QFileDialog.getOpenFileName(self, "Choose the flatscan file you want to compute.",
-                                                            directory, "*.nxs *.hdf5", options=get_dialog_options())
-            if self.flat_scan != "":
+            flat_scan, validate_dialog = QFileDialog.getOpenFileName(self,
+                                                                     "Choose the flatscan file you want to compute.",
+                                                                     directory, "*.nxs *.hdf5",
+                                                                     options=get_dialog_options())
+            if validate_dialog:
+                self.flat_scan = flat_scan
                 self.flatfield_tab.flat_scan_viewer.clear()
                 self.flatfield_tab.flat_scan_input1.setText(self.flat_scan.split('/')[-1])
+            else:
+                print("Flatfield scan dialog killed. No or former flatfield used.")
