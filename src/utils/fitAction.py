@@ -326,3 +326,10 @@ def beta(x, y):
 def pearson7bg(x, backgr, slopeLin, amplitude, center, fwhmLike, exposant):
     PI = numpy.pi
     return backgr + slopeLin * x + amplitude * (1 + ((x-center) / fwhmLike) ** 2.0) ** (-exposant)
+
+
+def estimate_pearson7(x, y):
+    params = [1.95029979e+04, -2.60909223e+03, 3.52252164e+02, 1.33957258e+01, 1.69597427e-01, 1.90484157e+00]
+    constraints = numpy.zeros(shape=(len(params), 3))
+    return params, constraints
+
