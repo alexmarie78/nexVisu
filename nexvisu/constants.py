@@ -1,9 +1,11 @@
 from enum import Enum
-from utils.nexusNavigation import DatasetPathWithAttribute, DatasetPathContains
+from utils.nexusNavigation import DatasetPathWithAttribute, DatasetPathContains, get_current_directory
 from PyQt5.QtWidgets import QFileDialog
 
 import sys
 import distro
+
+SAVING_PATH = get_current_directory().replace('\\nexVisu\\nexvisu\\utils', '\\saved_data')
 
 
 class Detectors(Enum):

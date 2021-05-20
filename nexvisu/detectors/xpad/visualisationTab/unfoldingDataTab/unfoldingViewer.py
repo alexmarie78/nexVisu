@@ -3,7 +3,7 @@ from silx.gui.colors import Colormap
 from silx.gui.data.NumpyAxesSelector import NumpyAxesSelector
 from silx.gui.qt import QToolBar
 from silx.gui.plot.ScatterView import ScatterView
-from detectors.xpad.visualisationTab.unfoldingDataTab.unfoldingActions import Unfold, UnfoldWithFlatfield
+from detectors.xpad.visualisationTab.unfoldingDataTab.unfoldingActions import Unfold, UnfoldWithFlatfield, SaveAction
 
 import numpy
 import time
@@ -42,9 +42,11 @@ class UnfoldedDataViewer(QWidget):
 
         self.action_unfold = Unfold(self.plot, parent=self)
         self.action_unfold_with_flatfield = UnfoldWithFlatfield(self.plot, parent=self)
+        self.action_save = SaveAction(self.plot, parent=self)
 
         self.toolbar.addAction(self.action_unfold)
         self.toolbar.addAction(self.action_unfold_with_flatfield)
+        self.toolbar.addAction(self.action_save)
 
         self.scatter_selector.selectionChanged.connect(self.change_displayed_data)
 

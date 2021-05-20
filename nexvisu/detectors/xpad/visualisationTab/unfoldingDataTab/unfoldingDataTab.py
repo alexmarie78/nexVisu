@@ -1,6 +1,3 @@
-from pathlib import Path
-
-import numpy
 from PyQt5.QtCore import QTimer, pyqtSignal
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLineEdit, QInputDialog, QMessageBox
 from detectors.xpad.visualisationTab.unfoldingDataTab.unfoldingViewer import UnfoldedDataViewer
@@ -72,8 +69,8 @@ class UnfoldingDataTab(QWidget):
             if self.scatter_factor <= 0:
                 self.scatter_factor = 1
             # Create geometry of the detector
-            self.median_filter = self.calibration["median_filter"]
-            self.save_data = self.calibration["save_data"]
+            #self.median_filter = self.calibration["median_filter"]
+            #self.save_data = self.calibration["save_data"]
             if self.use_flatfield:
                 self.geometry = compute_geometry(self.calibration, self.flatfield, self.images)
             else:
@@ -116,15 +113,6 @@ class UnfoldingDataTab(QWidget):
         self.is_unfolding = False
         self.timer.stop()
 
-    def save_unfolded_data(self, image: numpy.ndarray, index: int, path: str):
-        Path(path).mkdir(parents=True, exist_ok=True)
-        xyz_line = ""
-        for i in range(len(image[0])):
-            xyz_line += ""+str(image[0][i])+" "+str(image[1][i])+" "+str(image[2][i])+"\n"
-
-        xyz_log_filename = f"raw_{index}.txt"  # modifier cette valeur selon le découpage...
-        with open(path + "/" + xyz_log_filename, "w") as saveFile:
-            saveFile.write(xyz_line)
 
         """
         image = numpy.asarray((image[0], image[1])) #image[2]))
