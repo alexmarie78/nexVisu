@@ -10,7 +10,7 @@ with open("README.md", "r") as fh:
 
 
 setup(
-    name="nexVisu"
+    name="nexVisu",
     version="1.0",
     author=__author__,
     author_email="alexandre.marie@synchrotron-soleil.fr",

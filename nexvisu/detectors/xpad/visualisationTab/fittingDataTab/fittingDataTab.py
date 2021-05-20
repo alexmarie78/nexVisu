@@ -38,7 +38,7 @@ class FittingDataTab(QWidget):
     def set_data_to_fit(self, data_to_fit):
         self._data_to_fit = data_to_fit
         self.fitting_data_selector.setData(numpy.zeros((len(data_to_fit), 1, 1)))
-        self.start_fitting()
+        #self.start_fitting()
 
     def plot_fit(self):
         if len(self._fitted_data) > 0:
@@ -53,7 +53,7 @@ class FittingDataTab(QWidget):
         self.fit.addtheory("pearson7", function=pearson7bg,
                            parameters=['backgr', 'slopeLin',
                                        'amplitude', 'center',
-                                       'fwhmLike', 'exposant'
+                                       'fwhm', 'exposant'
                                        ],
                            estimate=estimate_pearson7)
         self.fit.settheory("pearson7")
@@ -70,6 +70,6 @@ class FittingDataTab(QWidget):
                                    "Fitted data"
                                    )
                 self._fitted_data.append(self.plot.getActiveCurve())
-            except numpy.linalg.LinAlgError:
+            except (numpy.linalg.LinAlgError, TypeError):
                 print("Singular matrix error")
 

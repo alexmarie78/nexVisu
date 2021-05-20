@@ -138,7 +138,7 @@ class FlatfieldGroup(QGroupBox):
     def save_flatfield(self) -> None:
         # If there is a flatfield calculated and it has not yet been saved.
         if hasattr(self, 'result') and not self.flat_saved:
-            directory = get_current_directory().replace("nexVisu/src/utils", "") + f"/{self.flatfield_output.text()}.nxs"
+            directory = get_current_directory().replace("nexVisu/nexvisu/utils", "") + f"/{self.flatfield_output.text()}.nxs"
             path, _ = QFileDialog.getSaveFileName(self, 'Save File', directory, options=get_dialog_options())
             if path != "":
                 save_NXdata(filename=os.path.join(path),
@@ -158,7 +158,7 @@ class FlatfieldGroup(QGroupBox):
     def load_flatfield(self):
         if hasattr(self, 'result'):
             temp = self.result
-        directory = get_current_directory().replace("nexVisu/src/utils", "")
+        directory = get_current_directory().replace("nexVisu/nexvisu/utils", "")
         path, _ = QFileDialog.getOpenFileName(self, 'Select the flatfield file you want.',
                                               directory, options=get_dialog_options())
         if path == "":

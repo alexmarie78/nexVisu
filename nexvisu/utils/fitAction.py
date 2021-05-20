@@ -1,11 +1,10 @@
 from __future__ import division
 
 import logging
+import statistics
+
 import numpy
 
-from lmfit.lineshapes import pearson7
-
-from scipy import integrate
 from scipy.stats import linregress
 
 from silx.gui.plot.actions.PlotToolAction import PlotToolAction
@@ -16,13 +15,13 @@ from silx.math.fit import FitManager
 _logger = logging.getLogger(__name__)
 
 
-def getRoi(plot):
+def get_roi(plot):
     curve = plot.getActiveCurve()
     new_curve = None
-    for roi in plot.getCurvesRoiWidget().getRois():
+    for roi in plot.getCurvesRoiWidget().get_rois():
         if not roi == "ICR":
             new_curve = items.Curve()
-            roi = plot.getCurvesRoiWidget().getRois()[roi]
+            roi = plot.getCurvesRoiWidget().get_rois()[roi]
             if curve is not None:
                 x = []
                 y = []
@@ -40,7 +39,7 @@ def getRoi(plot):
 
 
 class FitAction(PlotToolAction):
-    """QAction to open a :class:`FitWidget` and set its data to the
+    """QAction to open a :class:`fit_widget` and set its data to the
     active curve if any, or to the first curve.
     :param plot: :class:`.PlotWidget` instance on which to operate
     :param parent: See :class:`QAction`
@@ -62,83 +61,87 @@ class FitAction(PlotToolAction):
 
     def _createToolWindow(self):
         # import done here rather than at module level to avoid circular import
-        # FitWidget -> BackgroundWidget -> PlotWindow -> actions -> fit -> FitWidget
+        # fit_widget -> BackgroundWidget -> PlotWindow -> actions -> fit -> fit_widget
         from silx.gui.fit.FitWidget import FitWidget
         from silx.math.fit import fittheories
 
         fit = FitManager()
         fit.loadtheories(fittheories)
-        fit.addtheory("pearson7", function=pearson7bg, parameters=["backgr", "slopeLin", "amplitude", "center", "fwhmLike", "exposant"], configure=None)
+        fit.addtheory("pearson7", function=pearson7bg,
+                      parameters=["backgr", "slopeline",
+                                  "amplitude", "center",
+                                  "fwhm", "exposant"],
+                      estimate=estimate_pearson7)
 
         window = FitWidget(parent=self.plot, fitmngr=fit)
         window.setWindowFlags(qt.Qt.Dialog)
-        window.sigFitWidgetSignal.connect(self.handle_signal)
+        window.sigfit_widgetSignal.connect(self.handle_signal)
 
         return window
 
-    def _connectPlot(self, window):
-        if self.isXRangeUpdatedOnZoom():
-            self.__setAutoXRangeEnabled(True)
+    def _connect_plot(self, window):
+        if self.is_x_range_updated_on_zoom():
+            self.__set_auto_x_range_enabled(True)
         else:
             plot = self.plot
             if plot is None:
                 _logger.error("No associated PlotWidget")
                 return
-            self._setXRange(*plot.getXAxis().getLimits())
+            self._set_x_range(*plot.getXAxis().getLimits())
 
-        if self.isFittedItemUpdatedFromActiveCurve():
-            self.__setFittedItemAutoUpdateEnabled(True)
+        if self.is_fitted_item_updated_from_active_curve():
+            self.__set_fitted_item_auto_update_enabled(True)
         else:
             # Wait for the next iteration, else the plot is not yet initialized
             # No curve available
-            qt.QTimer.singleShot(10, self._initFit)
+            qt.QTimer.singleShot(10, self._init_fit)
 
-    def _disconnectPlot(self, window):
-        if self.isXRangeUpdatedOnZoom():
-            self.__setAutoXRangeEnabled(False)
+    def _disconnect_plot(self, window):
+        if self.is_x_range_updated_on_zoom():
+            self.__set_auto_x_range_enabled(False)
 
-        if self.isFittedItemUpdatedFromActiveCurve():
-            self.__setFittedItemAutoUpdateEnabled(False)
+        if self.is_fitted_item_updated_from_active_curve():
+            self.__set_fitted_item_auto_update_enabled(False)
 
-    def _initFit(self):
+    def _init_fit(self):
         plot = self.plot
         if plot is None:
             _logger.error("No associated PlotWidget")
             return
 
-        item = getRoi(plot)
+        item = get_roi(plot)
 
-        self._setXRange(*plot.getXAxis().getLimits())
-        self._setFittedItem(item)
-        self.setXRangeUpdatedOnZoom(False)
+        self._set_x_range(*plot.getXAxis().getLimits())
+        self._set_fitted_item(item)
+        self.set_x_range_updated_on_zoom(False)
 
-    def __updateFitWidget(self):
-        """Update the data/range used by the FitWidget"""
-        fitWidget = self._getToolWindow()
+    def __update_fit_widget(self):
+        """Update the data/range used by the fit_widget"""
+        fit_widget = self._getToolWindow()
 
-        item = self._getFittedItem()
-        xdata = self.getXData(copy=False)
-        ydata = self.getYData(copy=False)
+        item = self._get_fitted_item()
+        xdata = self.get_x_data(copy=False)
+        ydata = self.get_y_data(copy=False)
 
         if item is None or xdata is None or ydata is None:
-            fitWidget.setData(y=None)
-            fitWidget.setWindowTitle("No curve selected")
+            fit_widget.setData(y=None)
+            fit_widget.setWindowTitle("No curve selected")
 
         else:
-            xmin, xmax = self.getXRange()
-            fitWidget.setData(
+            xmin, xmax = self.get_x_range()
+            fit_widget.setData(
                 xdata, ydata, xmin=xmin, xmax=xmax)
-            fitWidget.setWindowTitle(
+            fit_widget.setWindowTitle(
                 "Fitting " + item.getName() +
                 " on x range %f-%f" % (xmin, xmax))
 
     # X Range management
 
-    def getXRange(self):
+    def get_x_range(self):
         """Returns the range on the X axis on which to perform the fit."""
         return self.__range
 
-    def _setXRange(self, xmin, xmax):
+    def _set_x_range(self, xmin, xmax):
         """Set the range on which the fit is done.
         :param float xmin:
         :param float xmax:
@@ -146,9 +149,9 @@ class FitAction(PlotToolAction):
         range_ = float(xmin), float(xmax)
         if self.__range != range_:
             self.__range = range_
-            self.__updateFitWidget()
+            self.__update_fit_widget()
 
-    def __setAutoXRangeEnabled(self, enabled):
+    def __set_auto_x_range_enabled(self, enabled):
         """Implement the change of update mode of the X range.
         :param bool enabled:
         """
@@ -158,21 +161,21 @@ class FitAction(PlotToolAction):
             return
 
         if enabled:
-            self._setXRange(*plot.getXAxis().getLimits())
-            plot.getXAxis().sigLimitsChanged.connect(self._setXRange)
+            self._set_x_range(*plot.getXAxis().getLimits())
+            plot.getXAxis().sigLimitsChanged.connect(self._set_x_range)
         else:
-            plot.getXAxis().sigLimitsChanged.disconnect(self._setXRange)
+            plot.getXAxis().sigLimitsChanged.disconnect(self._set_x_range)
 
-    def setXRangeUpdatedOnZoom(self, enabled):
+    def set_x_range_updated_on_zoom(self, enabled):
         """Set whether or not to update the X range on zoom change.
         :param bool enabled:
         """
         if enabled != self.__rangeAutoUpdate:
             self.__rangeAutoUpdate = enabled
             if self._getToolWindow().isVisible():
-                self.__setAutoXRangeEnabled(enabled)
+                self.__set_auto_x_range_enabled(enabled)
 
-    def isXRangeUpdatedOnZoom(self):
+    def is_x_range_updated_on_zoom(self):
         """Returns the current mode of fitted data X range update.
         :rtype: bool
         """
@@ -180,7 +183,7 @@ class FitAction(PlotToolAction):
 
     # Fitted item update
 
-    def getXData(self, copy=True):
+    def get_x_data(self, copy=True):
         """Returns the X data used for the fit or None if undefined.
         :param bool copy:
             True to get a copy of the data, False to get the internal data.
@@ -188,7 +191,7 @@ class FitAction(PlotToolAction):
         """
         return None if self.__x is None else numpy.array(self.__x, copy=copy)
 
-    def getYData(self, copy=True):
+    def get_y_data(self, copy=True):
         """Returns the Y data used for the fit or None if undefined.
         :param bool copy:
             True to get a copy of the data, False to get the internal data.
@@ -196,13 +199,13 @@ class FitAction(PlotToolAction):
         """
         return None if self.__y is None else numpy.array(self.__y, copy=copy)
 
-    def _getFittedItem(self):
+    def _get_fitted_item(self):
         """Returns the current item used for the fit
         :rtype: Union[~silx.gui.plot.items.Curve,~silx.gui.plot.items.Histogram,None]
         """
         return self.__item
 
-    def _setFittedItem(self, item):
+    def _set_fitted_item(self, item):
         """Set the curve to use for fitting.
         :param Union[~silx.gui.plot.items.Curve,~silx.gui.plot.items.Histogram,None] item:
         """
@@ -213,7 +216,7 @@ class FitAction(PlotToolAction):
         if plot is None or item is None:
             self.__item = None
             self.__curveParams = {}
-            self.__updateFitWidget()
+            self.__update_fit_widget()
             return
 
         axis = item.getYAxis() if isinstance(item, items.YAxisMixIn) else 'left'
@@ -231,23 +234,23 @@ class FitAction(PlotToolAction):
             self.__y = item.getValueData(copy=False)
         # else take the active curve, or else the unique curve
         elif isinstance(item, items.Curve):
-            self.__x = item.getXData(copy=False)
-            self.__y = item.getYData(copy=False)
+            self.__x = item.get_x_data(copy=False)
+            self.__y = item.get_y_data(copy=False)
 
         self.__item = item
 
-        self.__updateFitWidget()
+        self.__update_fit_widget()
 
-    def __activeCurveChanged(self, previous, current):
+    def __active_curve_changed(self, previous, current):
         """Handle change of active curve in the PlotWidget
         """
         if current is None:
-            self._setFittedItem(None)
+            self._set_fitted_item(None)
         else:
-            item = getRoi(self.plot)
-            self._setFittedItem(item)
+            item = get_roi(self.plot)
+            self._set_fitted_item(item)
 
-    def __setFittedItemAutoUpdateEnabled(self, enabled):
+    def __set_fitted_item_auto_update_enabled(self, enabled):
         """Implement the change of fitted item update mode
         :param bool enabled:
         """
@@ -257,15 +260,15 @@ class FitAction(PlotToolAction):
             return
 
         if enabled:
-            item = getRoi(self.plot)
-            self._setFittedItem(item)
-            plot.sigActiveCurveChanged.connect(self.__activeCurveChanged)
+            item = get_roi(self.plot)
+            self._set_fitted_item(item)
+            plot.sigActiveCurveChanged.connect(self.__active_curve_changed)
 
         else:
             plot.sigActiveCurveChanged.disconnect(
-                self.__activeCurveChanged)
+                self.__active_curve_changed)
 
-    def setFittedItemUpdatedFromActiveCurve(self, enabled):
+    def set_fitted_item_updated_from_active_curve(self, enabled):
         """Toggle fitted data synchronization with plot active curve.
         :param bool enabled:
         """
@@ -273,9 +276,9 @@ class FitAction(PlotToolAction):
         if enabled != self.__activeCurveSynchroEnabled:
             self.__activeCurveSynchroEnabled = enabled
             if self._getToolWindow().isVisible():
-                self.__setFittedItemAutoUpdateEnabled(enabled)
+                self.__set_fitted_item_auto_update_enabled(enabled)
 
-    def isFittedItemUpdatedFromActiveCurve(self):
+    def is_fitted_item_updated_from_active_curve(self):
         """Returns True if fitted data is synchronized with plot.
         :rtype: bool
         """
@@ -284,12 +287,12 @@ class FitAction(PlotToolAction):
     # Handle fit completed
 
     def handle_signal(self, ddict):
-        xdata = self.getXData(copy=False)
+        xdata = self.get_x_data(copy=False)
         if xdata is None:
             _logger.error("No reference data to display fit result for")
             return
 
-        xmin, xmax = self.getXRange()
+        xmin, xmax = self.get_x_range()
         x_fit = xdata[xmin <= xdata]
         x_fit = x_fit[x_fit <= xmax]
         fit_legend = "Fit <%s>" % self.__legend
@@ -314,33 +317,31 @@ class FitAction(PlotToolAction):
             if fit_curve is not None:
                 fit_curve.setVisible(False)
 
-"""
-def pearson7(x, mu, sigma, nu):
-    return (1/(((nu * (sigma**2))**-2) * beta(nu/2, 1/2))) * (1 + (1/nu) * ((x - mu)**2)/(sigma**2)) ** ((-nu + 1)/2)
 
-
-def beta(x, y):
-    return integrate.quad(lambda x0, y0, t: (t**(x0-1))*((1-t)**(y0-1)), 0, 1, args=(x, y))
-"""
-
-
-def pearson7bg(x, backgr, slopeLin, amplitude, center, fwhmLike, exposant):
-    PI = numpy.pi
-    return backgr + slopeLin * x + amplitude * (1 + ((x-center) / fwhmLike) ** 2.0) ** (-exposant)
+def pearson7bg(x, backgr, slopeline, amplitude, center, fwhmlike, exposant):
+    return backgr + slopeline * x + amplitude * (1 + ((x-center) / fwhmlike) ** 2.0) ** (-exposant)
 
 
 def estimate_pearson7(x, y):
-    backgr = y[0]
+    backgr = statistics.mean(y[::5] + y[-5::])
     slopeline, _, _, _, _ = linregress(x, y)
-    amplitude = max(y) - y[0]
-    center = numpy.where((max(y)))[0]
-    fwhmlike = numpy.mean([x for x in range(len(x)) if y[x] > max(y)/2.0])
+    amplitude = max(y) - backgr
+    center = numpy.argmax(y)
+    upper_points = [index for index in range(len(x)) if y[index] > max(y)/2.0]
+    fwhm = []
+
+    for i in range(1, len(upper_points)):
+        if upper_points[i] - upper_points[i - 1] > 10:
+            fwhm.append(x[upper_points[i - 1]])
+            break
+        fwhm.append(x[upper_points[i - 1]])
+
+    fwhm = fwhm[-1] - fwhm[0]
     exposant = 2.0
 
     # params = [1.95029979e+04, -2.60909223e+03, 3.52252164e+02, 1.33957258e+01, 1.69597427e-01, 1.90484157e+00]
-    params = [backgr, slopeline, amplitude, center, fwhmlike, exposant]
+    params = [backgr, slopeline, amplitude, center, fwhm, exposant]
     constraints = numpy.zeros(shape=(len(params), 3))
     print(params)
     print(constraints)
     return params, constraints
-

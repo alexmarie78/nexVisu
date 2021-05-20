@@ -138,7 +138,7 @@ dmypy.json
 
 # processed data
 saved_data/
-src/calibration.json
+nexvisu/calibration.json
 
 # Personal files
 TODO.txt
