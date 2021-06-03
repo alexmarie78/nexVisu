@@ -18,6 +18,7 @@ class UnfoldingDataTab(QWidget):
 
         self.geometry = {}
         self.calibration = {}
+        self.cache = {}
 
         self.flatfield = None
         self.images = None
@@ -68,23 +69,48 @@ class UnfoldingDataTab(QWidget):
         else:
             if self.scatter_factor <= 0:
                 self.scatter_factor = 1
-            # Create geometry of the detector
-            #self.median_filter = self.calibration["median_filter"]
-            #self.save_data = self.calibration["save_data"]
-            if self.use_flatfield:
-                self.geometry = compute_geometry(self.calibration, self.flatfield, self.images)
-            else:
-                self.geometry = compute_geometry(self.calibration, None, self.images)
-            # Collect the angles
-            self.delta_array, self.gamma_array = get_angles(self.path)
 
-            # Populate the iterators that will help running the unfolding of data
-            self.data_iterator = iter([image for image in self.images])
-            self.index_iterator = iter([i for i in range(self.images.shape[0])])
-            self.progress = ProgressWidget('Unfolding data', self.images.shape[0])
-            # Start the timer and the unfolding
-            self.timer.start()
-            self.is_unfolding = True
+            if self.memoisation() not in self.cache:
+                # Create geometry of the detector
+                self.compute_geometry()
+
+                # Collect the angles
+                self.delta_array, self.gamma_array = get_angles(self.path)
+
+                # Populate the iterators that will help running the unfolding of data
+                self.data_iterator = iter([image for image in self.images])
+                self.index_iterator = iter([i for i in range(self.images.shape[0])])
+                self.progress = ProgressWidget('Unfolding data', self.images.shape[0])
+                # Start the timer and the unfolding
+                self.timer.start()
+                self.is_unfolding = True
+            else:
+                self.get_cached_data()
+                self.unfoldingFinished.emit()
+
+    def get_cached_data(self):
+        print("hello cached")
+        index_data = self.memoisation()
+        self.geometry = self.cache[index_data]['geometry']
+        for image in self.cache[index_data]['images']:
+            self.viewer.add_scatter(image, 1)
+
+    def compute_geometry(self):
+        calib = self.memoisation()
+        if self.use_flatfield:
+            self.geometry = compute_geometry(self.calibration, self.flatfield, self.images)
+        else:
+            print('hello no flat')
+            self.geometry = compute_geometry(self.calibration, None, self.images)
+        self.cache[calib] = {}
+        self.cache[calib]['geometry'] = self.geometry
+
+    def memoisation(self):
+        index = []
+        for value in self.calibration.values():
+            index += value
+        index.append(self.use_flatfield)
+        return tuple(index)
 
     def unfold_data(self):
         try:
@@ -107,6 +133,7 @@ class UnfoldingDataTab(QWidget):
             self.is_unfolding = False
             self.progress.deleteLater()
             self.progress = None
+            self.cache[self.memoisation()]['images'] = self.viewer.get_scatter_items()
             self.unfoldingFinished.emit()
 
     def reset_unfolding(self):
@@ -126,3 +153,6 @@ class UnfoldingDataTab(QWidget):
 
     def add_flatfield(self):
         self.use_flatfield = True
+
+    def set_calibration(self, calibration):
+        self.calibration = calibration

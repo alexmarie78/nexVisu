@@ -6,8 +6,8 @@ from PyQt5.QtGui import QFont, QValidator
 from PyQt5.QtWidgets import QLabel, QPushButton, QLineEdit, QWidget, QGridLayout, QVBoxLayout, QHBoxLayout
 from PyQt5.QtCore import pyqtSignal
 
-from nexvisu.constants import SAVING_PATH
-from nexvisu.utils.nexusNavigation import get_current_directory
+from constants import SAVING_PATH
+from utils.nexusNavigation import get_current_directory
 
 
 class DirectBeamWidget(QWidget):

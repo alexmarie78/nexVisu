@@ -134,7 +134,7 @@ class XpadVisualisation(QWidget):
     def set_calibration(self, calibration):
         # Check if there is a empty list of coordinate in the direct beam calibration
         if not [] in [value for value in calibration.values()]:
-            self.unfolded_data_tab.calibration = calibration
+            self.unfolded_data_tab.set_calibration(calibration)
             if self.unfolded_data_tab.images is not None:
                 self.unfolded_data_tab.start_unfolding()
         else:
@@ -144,6 +144,7 @@ class XpadVisualisation(QWidget):
         self.unfoldButtonClicked.emit()
 
     def create_diagram_array(self):
+        numpy.seterr(divide='ignore', invalid='ignore')
         for image in self.unfolded_data_tab.viewer.get_scatter_items():
             self.diagram_data_array.append(extract_diffraction_diagram(image[0],
                                                                        image[1],
