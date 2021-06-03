@@ -58,36 +58,38 @@ class FittingDataTab(QWidget):
                            estimate=estimate_pearson7)
         self.fit.settheory("pearson7")
         print("Start fitting...")
+        maximums = []
         for data in self._data_to_fit:
-            print(data[0], data[1][~numpy.isnan(data[1])])
-            first_maximum = max(data[1][~numpy.isnan(data[1])])
-            maximum = max(data[1][~numpy.isnan(data[1])])
+            # x = data[0][~numpy.isnan(data[0])]
+            # y = data[1][~numpy.isnan(data[1])]
+            x = data[0]
+            y = data[1]
+            maximums.append(max(y))
             try:
                 print("Searching peak and fitting it...")
-                while maximum > (first_maximum / 2.0):
+                while maximum > (maximums[0] / 2.0):
                     print('\n\n', first_maximum, maximum, '\n\n')
-                    peak = numpy.where(data[1] == maximum)[0][0]
-                        # data[1].index(maximum)
+                    peak = numpy.where(y == maximum)[0][0]
                     print("Peak : ", peak)
-                    start = peak - 890 if peak - 890 > 0 else 0
-                    end = peak + 890 if peak + 890 < len(data[1]) else len(data[1]) - 1
-                    x = data[0][start: end]
-                    y = data[1][start: end]
-                    print("Peak found, data : ", x, y)
+                    left = peak - 800 if peak - 800 > 0 else 0
+                    right = peak + 800 if peak + 800 < len(x) else len(x) - 1
+                    print("Peak around : ", x[left], x[right])
+                    x_peak = x[left: right]
+                    y_peak = y[left: right]
                     self.plot.addCurve(data[0], data[1], "Data to fit")
-                    self.fit.setdata(x=x, y=y)
+                    self.fit.setdata(x=x_peak, y=y_peak)
                     self.fit.estimate()
                     # backgr, slopeLin, amplitude, center, fwhmLike, exposant = (param['fitresult'] for param in self.fit.fit_results)
                     self.fit.runfit()
 
-                    self.plot.addCurve(x, pearson7bg(x, *(param['fitresult'] for param in self.fit.fit_results)),
+                    self.plot.addCurve(x_peak, pearson7bg(x_peak, *(param['fitresult'] for param in self.fit.fit_results)),
                                        "Fitted data"
                                        )
                     self._fitted_data.append(self.plot.getActiveCurve())
 
-                    data[0] = data[0][:start] + data[0][end:]
-                    data[1] = data[1][:start] + data[1][end:]
-                    maximum = max(data[1])
+                    x = numpy.concatenate([x[:left], x[right:]])
+                    y = numpy.concatenate([y[:left], y[right:]])
+                    maximum = max(y)
             except (numpy.linalg.LinAlgError, TypeError):
                 print("Singular matrix error")
 

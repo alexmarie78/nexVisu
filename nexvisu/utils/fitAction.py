@@ -319,7 +319,7 @@ class FitAction(PlotToolAction):
 
 
 def pearson7bg(x, backgr, slopeline, amplitude, center, fwhmlike, exposant):
-    print(x, backgr, slopeline, amplitude, center, fwhmlike, exposant)
+    # print(x, backgr, slopeline, amplitude, center, fwhmlike, exposant)
     return backgr + slopeline * x + amplitude * (1 + ((x-center) / fwhmlike) ** 2.0) ** (-exposant)
 
 
