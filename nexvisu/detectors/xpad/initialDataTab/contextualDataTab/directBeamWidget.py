@@ -1,9 +1,13 @@
 import json
 import os
 
+from pathlib import Path
 from PyQt5.QtGui import QFont, QValidator
 from PyQt5.QtWidgets import QLabel, QPushButton, QLineEdit, QWidget, QGridLayout, QVBoxLayout, QHBoxLayout
 from PyQt5.QtCore import pyqtSignal
+
+from nexvisu.constants import SAVING_PATH
+from nexvisu.utils.nexusNavigation import get_current_directory
 
 
 class DirectBeamWidget(QWidget):
@@ -103,7 +107,7 @@ class DirectBeamWidget(QWidget):
         # self.force_numeric()
         self.connect_labels()
 
-        calibration = read_calibration(os.path.dirname(os.path.realpath(__file__))+'\\..\\..\\..\\..\\calibration.json')
+        calibration = read_calibration()
         if calibration:
             self.init_calibration(calibration)
 
@@ -210,8 +214,7 @@ class DirectBeamWidget(QWidget):
                 pix_per_deg /= (number_of_inputs - 1) if number_of_inputs > 1 else 1
         print(pix_per_deg)
         self.distance_output.setText(str(pix_per_deg))
-        print('Trying write in ', os.path.dirname(os.path.realpath(__file__))+'\\calibration.json')
-        write_calibration(self.get_contextual_data(), os.path.dirname(os.path.realpath(__file__))+'\\..\\..\\..\\..\\calibration.json')
+        write_calibration(self.get_contextual_data())
 
     # GERER L'ENVOI DES DONNEES
 
@@ -224,21 +227,29 @@ def is_number(string):
         return False
 
 
-def write_calibration(calibration, path):
+def write_calibration(calibration, path=SAVING_PATH):
+    Path(path).mkdir(parents=True, exist_ok=True)
+    print('Trying write in ', path + '\\calibration.json')
     try:
         with open(path, "w") as outfile:
             json.dump(calibration, outfile)
+        print("Configuration written.")
         return True
     except FileNotFoundError:
+        print("A problem occured, configuration has not been written.")
         return False
 
 
-def read_calibration(path):
+def read_calibration(path=SAVING_PATH):
+    Path(path).mkdir(parents=True, exist_ok=True)
+    print('Trying read from ', path + '\\calibration.json')
     try:
-        with open(path, "r") as infile:
+        with open(path + '\\calibration.json', "r") as infile:
             calibration = json.load(infile)
+        print("Configuration found.")
         return calibration
     except FileNotFoundError:
+        print("Configuration not found.")
         return None
 
 
