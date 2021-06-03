@@ -57,19 +57,37 @@ class FittingDataTab(QWidget):
                                        ],
                            estimate=estimate_pearson7)
         self.fit.settheory("pearson7")
+        print("Start fitting...")
         for data in self._data_to_fit:
+            print(data[0], data[1][~numpy.isnan(data[1])])
+            first_maximum = max(data[1][~numpy.isnan(data[1])])
+            maximum = max(data[1][~numpy.isnan(data[1])])
             try:
-                self.plot.addCurve(data[0], data[1], "Data to fit")
-                self.fit.setdata(x=data[0], y=data[1])
-                self.fit.estimate()
-                # backgr, slopeLin, amplitude, center, fwhmLike, exposant = (param['fitresult'] for param in self.fit.fit_results)
-                self.fit.runfit()
+                print("Searching peak and fitting it...")
+                while maximum > (first_maximum / 2.0):
+                    print('\n\n', first_maximum, maximum, '\n\n')
+                    peak = numpy.where(data[1] == maximum)[0][0]
+                        # data[1].index(maximum)
+                    print("Peak : ", peak)
+                    start = peak - 890 if peak - 890 > 0 else 0
+                    end = peak + 890 if peak + 890 < len(data[1]) else len(data[1]) - 1
+                    x = data[0][start: end]
+                    y = data[1][start: end]
+                    print("Peak found, data : ", x, y)
+                    self.plot.addCurve(data[0], data[1], "Data to fit")
+                    self.fit.setdata(x=x, y=y)
+                    self.fit.estimate()
+                    # backgr, slopeLin, amplitude, center, fwhmLike, exposant = (param['fitresult'] for param in self.fit.fit_results)
+                    self.fit.runfit()
 
-                self.plot.addCurve(data[0],
-                                   pearson7bg(data[0], *(param['fitresult'] for param in self.fit.fit_results)),
-                                   "Fitted data"
-                                   )
-                self._fitted_data.append(self.plot.getActiveCurve())
+                    self.plot.addCurve(x, pearson7bg(x, *(param['fitresult'] for param in self.fit.fit_results)),
+                                       "Fitted data"
+                                       )
+                    self._fitted_data.append(self.plot.getActiveCurve())
+
+                    data[0] = data[0][:start] + data[0][end:]
+                    data[1] = data[1][:start] + data[1][end:]
+                    maximum = max(data[1])
             except (numpy.linalg.LinAlgError, TypeError):
                 print("Singular matrix error")
 

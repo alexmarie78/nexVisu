@@ -324,10 +324,10 @@ def pearson7bg(x, backgr, slopeline, amplitude, center, fwhmlike, exposant):
 
 
 def estimate_pearson7(x, y):
-    backgr = statistics.mean(y[::5] + y[-5::])
+    backgr = statistics.mean(y[:5] + y[-5:])
     slopeline, _, _, _, _ = linregress(x, y)
     amplitude = max(y) - backgr
-    center = numpy.argmax(y)
+    center = x[numpy.argmax(y)]
     upper_points = [index for index in range(len(x)) if y[index] > max(y)/2.0]
     fwhm = []
 
