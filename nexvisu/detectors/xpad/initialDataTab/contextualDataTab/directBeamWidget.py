@@ -264,7 +264,7 @@ class NumericValidator(QValidator):
             return QValidator.Acceptable, pos
         else:
             self.fixup(s)
-            #return QValidator.Invalid, pos
+            # return QValidator.Invalid, pos
 
     def fixup(self, s):
         print(s.count())

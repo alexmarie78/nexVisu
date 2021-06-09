@@ -49,12 +49,12 @@ class SaveAction(PlotAction):
                             tooltip='Saves unfolded data',
                             triggered=self.save_images,
                             parent=parent)
-        self.parent=parent
+        self.parent = parent
 
     def save_images(self):
         saved = QMessageBox(QMessageBox.Question, 'Saving unfolded data ?',
-                           "Do you want to save the unfolded images ?",
-                           QMessageBox.Ok | QMessageBox.Cancel).exec_()
+                            "Do you want to save the unfolded images ?",
+                            QMessageBox.Ok | QMessageBox.Cancel).exec_()
         if saved == QMessageBox.Ok:
             path = SAVING_PATH + "\\unfolded_data"
             for index, image in enumerate(self.parent.get_scatter_items()):

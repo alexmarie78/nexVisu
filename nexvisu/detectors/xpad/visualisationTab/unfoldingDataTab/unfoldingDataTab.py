@@ -140,7 +140,6 @@ class UnfoldingDataTab(QWidget):
         self.is_unfolding = False
         self.timer.stop()
 
-
         """
         image = numpy.asarray((image[0], image[1])) #image[2]))
         im = Image.fromarray(image)
