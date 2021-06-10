@@ -50,17 +50,6 @@ class Xpad(QWidget):
 
     def get_contextual_data(self):
         calib = self.data_context.experimental_data_tab.direct_beam_widget.get_contextual_data()
-        """
-        save_dialog = QMessageBox(QMessageBox.Question, "Save ?", "Do you want to save unfolded data?",
-                                            QMessageBox.Ok | QMessageBox.Cancel).exec()
-        print(save_dialog)
-        # calib["save_data"] = True if save_dialog.text() else
-        # self.data_context.experimental_data_tab.save_unfoldded_data_check.isChecked()
-        calib["median_filter"] = QMessageBox(QMessageBox.Question, "Median filter ?",
-                                                      "Do you want to use median filter to unfold data?",
-                                                QMessageBox.Ok | QMessageBox.Cancel).exec()
-        # self.data_context.experimental_data_tab.median_filter_check.isChecked()
-        """
         self.xpad_visualisation.set_calibration(calib)
 
 
