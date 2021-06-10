@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLineEdit, QInputDialog, QMess
 from detectors.xpad.visualisationTab.unfoldingDataTab.unfoldingViewer import UnfoldedDataViewer
 from utils.imageProcessing import compute_geometry, correct_and_unfold_data, extract_diffraction_diagram, get_angles
 from utils.progressWidget import ProgressWidget
-
+from utils.cacheFunctions import memoisation
 
 class UnfoldingDataTab(QWidget):
     unfoldingFinished = pyqtSignal()
@@ -70,7 +70,7 @@ class UnfoldingDataTab(QWidget):
             if self.scatter_factor <= 0:
                 self.scatter_factor = 1
 
-            if self.memoisation() not in self.cache:
+            if memoisation(self.calibration, self.use_flatfield) not in self.cache:
                 # Create geometry of the detector
                 self.compute_geometry()
 
@@ -90,13 +90,13 @@ class UnfoldingDataTab(QWidget):
 
     def get_cached_data(self):
         print("hello cached")
-        index_data = self.memoisation()
+        index_data = memoisation(self.calibration, self.use_flatfield)
         self.geometry = self.cache[index_data]['geometry']
         for image in self.cache[index_data]['images']:
             self.viewer.add_scatter(image, 1)
 
     def compute_geometry(self):
-        calib = self.memoisation()
+        calib = memoisation(self.calibration, self.use_flatfield)
         if self.use_flatfield:
             self.geometry = compute_geometry(self.calibration, self.flatfield, self.images)
         else:
@@ -104,13 +104,6 @@ class UnfoldingDataTab(QWidget):
             self.geometry = compute_geometry(self.calibration, None, self.images)
         self.cache[calib] = {}
         self.cache[calib]['geometry'] = self.geometry
-
-    def memoisation(self):
-        index = []
-        for value in self.calibration.values():
-            index += value
-        index.append(self.use_flatfield)
-        return tuple(index)
 
     def unfold_data(self):
         try:
@@ -133,7 +126,7 @@ class UnfoldingDataTab(QWidget):
             self.is_unfolding = False
             self.progress.deleteLater()
             self.progress = None
-            self.cache[self.memoisation()]['images'] = self.viewer.get_scatter_items()
+            self.cache[memoisation(self.calibration, self.use_flatfield)]['images'] = self.viewer.get_scatter_items()
             self.unfoldingFinished.emit()
 
     def reset_unfolding(self):

@@ -8,6 +8,7 @@ from PyQt5.QtCore import pyqtSignal
 
 from constants import SAVING_PATH
 from utils.nexusNavigation import get_current_directory
+from utils.cacheFunctions import memoisation
 
 
 class DirectBeamWidget(QWidget):
@@ -40,6 +41,8 @@ class DirectBeamWidget(QWidget):
         self.distance_output = QLineEdit()
         self.distance_output.setReadOnly(True)
         self.distance_widget = QWidget()
+
+        self.calibration_cached = {}
 
         self.input_lists = {
             '0': self.x_inputs,
@@ -214,9 +217,22 @@ class DirectBeamWidget(QWidget):
                 pix_per_deg /= (number_of_inputs - 1) if number_of_inputs > 1 else 1
         print(pix_per_deg)
         self.distance_output.setText(str(pix_per_deg))
-        write_calibration(self.get_contextual_data())
+        self.write_calibration()
 
-    # GERER L'ENVOI DES DONNEES
+    def write_calibration(self, path=SAVING_PATH):
+        calibration = self.get_contextual_data()
+        if memoisation(calibration) not in self.calibration_cached:
+            Path(path).mkdir(parents=True, exist_ok=True)
+            print('Trying write in ', path + '\\calibration.json')
+            try:
+                with open(path + '\\calibration.json', "w") as outfile:
+                    json.dump(calibration, outfile)
+                print("Configuration written.")
+                self.calibration_cached[memoisation(calibration)] = calibration
+                return True
+            except FileNotFoundError:
+                print("A problem occured, configuration has not been written.")
+                return False
 
 
 def is_number(string):
@@ -227,17 +243,7 @@ def is_number(string):
         return False
 
 
-def write_calibration(calibration, path=SAVING_PATH):
-    Path(path).mkdir(parents=True, exist_ok=True)
-    print('Trying write in ', path + '\\calibration.json')
-    try:
-        with open(path, "w") as outfile:
-            json.dump(calibration, outfile)
-        print("Configuration written.")
-        return True
-    except FileNotFoundError:
-        print("A problem occured, configuration has not been written.")
-        return False
+
 
 
 def read_calibration(path=SAVING_PATH):
