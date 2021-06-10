@@ -157,6 +157,7 @@ class XpadVisualisation(QWidget):
         self.plot_diagram()
         self.automatic_fit_tab.set_data_to_fit(self.diagram_data_array)
         self.fitting_data_selector.selectionChanged.emit()
+        set_plot_limits(self.diagram_data_plot, self.diagram_data_plot.getActiveCurve())
 
     def plot_diagram(self, images_to_remove=[-1]):
         self.diagram_data_plot.setGraphTitle(f"Diagram diffraction of {self.path.split('/')[-1]}")
@@ -179,7 +180,7 @@ class XpadVisualisation(QWidget):
             self.clear_plot_fitting_widget()
             curve = self.diagram_data_array[self.fitting_data_selector.selection()[0]]
             self.fitting_data_plot.addCurve(curve[0], curve[1], symbol='o')
-            self.set_graph_limits(curve)
+            set_plot_limits(self.fitting_data_plot, curve)
 
     def get_roi_list(self, events: dict):
         self.rois_list = list(events["roilist"])
@@ -188,15 +189,16 @@ class XpadVisualisation(QWidget):
         self.fitting_data_plot.clear()
         self.fitting_data_plot.clearMarkers()
 
-    def set_graph_limits(self, curve):
+
+def set_plot_limits(plot, curve):
+    if curve is not None and plot is not None:
+        print(min(curve[0]), max(curve[0]), min(curve[1]), max(curve[1]))
         indexes_not_nan = numpy.where(numpy.logical_and(~numpy.isnan(curve[1]), ~numpy.isinf(curve[1])))[0]
         index_x_min = indexes_not_nan[0]
         index_x_max = indexes_not_nan[-1]
 
         index_y_min = int(numpy.floor(min(curve[1][indexes_not_nan[0]: indexes_not_nan[-1] + 1])))
         index_y_max = int(numpy.ceil(max(curve[1][indexes_not_nan[0]: indexes_not_nan[-1] + 1])))
-        self.fitting_data_plot.setLimits(curve[0][index_x_min],
-                                         curve[0][index_x_max],
-                                         index_y_min, index_y_max)
 
-
+        print(index_x_min, index_x_max, index_y_min, index_y_max)
+        plot.setLimits(curve[0][index_x_min], curve[0][index_x_max], index_y_min, index_y_max)
