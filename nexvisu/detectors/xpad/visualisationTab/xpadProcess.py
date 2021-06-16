@@ -200,5 +200,5 @@ def set_plot_limits(plot, curve):
         index_y_min = int(numpy.floor(min(curve[1][indexes_not_nan[0]: indexes_not_nan[-1] + 1])))
         index_y_max = int(numpy.ceil(max(curve[1][indexes_not_nan[0]: indexes_not_nan[-1] + 1])))
 
-        print(index_x_min, index_x_max, index_y_min, index_y_max)
+        print(curve[0][index_x_min], curve[0][index_x_max], curve[1][index_y_min], curve[1][index_y_max])
         plot.setLimits(curve[0][index_x_min], curve[0][index_x_max], index_y_min, index_y_max)
