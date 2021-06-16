@@ -1,9 +1,9 @@
 from scipy import ndimage
 
-from src.constants import DataPath, MetadataPath
+from constants import DataPath, MetadataPath
 from h5py import File
 from PyQt5.QtWidgets import QMessageBox, QProgressBar, QApplication
-from src.utils.nexusNavigation import get_dataset
+from utils.nexusNavigation import get_dataset
 
 import numpy
 import os
@@ -20,8 +20,8 @@ def gen_flatfield(first_scan: int, last_scan: int, path: str, progress: QProgres
     completed = 0
     progress.setVisible(True)
     for i in range(last_scan - first_scan + 1):
+        filename = scan_name + f"{i + first_scan}" + extension
         try:
-            filename = scan_name + f"{i + first_scan}" + extension
             with File(os.path.join(directory_path, filename), mode='r') as h5file:
                 for data in get_dataset(h5file, DataPath.IMAGE_INTERPRETATION.value):
                     flatfield += data
@@ -54,20 +54,21 @@ def gen_flatfield(first_scan: int, last_scan: int, path: str, progress: QProgres
 def compute_geometry(contextual_data: dict, flat_image: numpy.ndarray, images: numpy.ndarray):
     deg2rad = numpy.pi / 180
     inv_deg2rad = 1 / (numpy.pi / 180)
-    calib = contextual_data["distance"]  # pixels in 1 deg.76.78
+    calib = contextual_data["distance"][0]  # pixels in 1 deg.76.78
     chip_size_x = 80
     chip_size_y = 120  # chip dimension, in pixels (X = horiz, Y = vertical)
     # Corrected positions (add 3 pixels whenever cross 80 * i in X)
-    x_center_detector = contextual_data["x"] + 3 * (contextual_data["x"] // chip_size_x)
+    x_center_detector = contextual_data["x"][0] + 3 * (contextual_data["x"][0] // chip_size_x)
     # position of direct beam on xpad at (delltaOffset, gamOffset).
     # Use the 'corrected' positions (add 3 pixels whenever cross 120 in Y)
-    y_center_detector = contextual_data["y"] + 3 * (contextual_data["y"] // chip_size_y)
-    delta_position = contextual_data["delta_position"] * -1.0 # Let the user input the real (negative value) of the delta position of the detector with direct beam
+    y_center_detector = contextual_data["y"][0] + 3 * (contextual_data["y"][0] // chip_size_y)
+    # Let the user input the real (negative value) of the delta position of the detector with direct beam
+    delta_position = contextual_data["delta_position"][0] * -1.0
     # positions in diffracto angles for which the above values XcenDetector, YcenDetectors are reported
-    gamma_position = contextual_data["gamma_position"] * -1.0
+    gamma_position = contextual_data["gamma_position"][0] * -1.0
     number_of_modules = images.shape[1] // chip_size_y
     number_of_chips = images.shape[2] // chip_size_x  # detector dimension, XPAD S-140
-    distance = contextual_data["distance"] / numpy.tan(1.0 * deg2rad)
+    distance = contextual_data["distance"][0] / numpy.tan(1.0 * deg2rad)
     lines_to_remove_array = [0, -3]
     between_chips = [i * 80 + 3 * (i - 1) + 1 for i in range(1, 7)]
 
@@ -77,6 +78,7 @@ def compute_geometry(contextual_data: dict, flat_image: numpy.ndarray, images: n
         flat_image_inv = 1.0 / flat_image
         flat_image_inv[numpy.isnan(flat_image_inv)] = -10000000
         flat_image_inv[numpy.isinf(flat_image_inv)] = -10000000
+        print("hello from flatimageinv computing")
     else:
         flat_image_inv = numpy.ones_like(images[0], dtype=numpy.float32)
         factor_intensity_double_pixel = 2.3
@@ -106,8 +108,8 @@ def compute_geometry(contextual_data: dict, flat_image: numpy.ndarray, images: n
             new_x_ifactor_array[temp_index] = 1  # no change in intensity
 
         # First two columns of chip i
-        new_x_array[temp_index0 - 1 : temp_index0 + 1] = [80 * indexChip] * 2
-        new_x_ifactor_array[temp_index0 - 1 : temp_index0 + 1] = [-1.0 / factor_intensity_double_pixel] * 2
+        new_x_array[temp_index0 - 1: temp_index0 + 1] = [80 * indexChip] * 2
+        new_x_ifactor_array[temp_index0 - 1: temp_index0 + 1] = [-1.0 / factor_intensity_double_pixel] * 2
 
         # Last two columns of chip i and double pixel
         new_x_array[temp_index0 + 79: temp_index0 + 82] = [80 * indexChip + 79] * 3
@@ -231,7 +233,7 @@ def correct_and_unfold_data(geometry: dict, image: numpy.ndarray, delta: float, 
     for x in range(0, geometry["image_corr1_size_x"]):
         this_corrected_image[:, x] = this_image[new_y_array[:], new_x_array[x]]
         if -1 <= intensity_factor[x] < 0:
-             this_corrected_image[:, x] = this_image[new_y_array[:], new_x_array[x]] / geometry["factor_intensity_double_pixel"]
+            this_corrected_image[:, x] = this_image[new_y_array[:], new_x_array[x]] / geometry["factor_intensity_double_pixel"]
     for x in geometry["between_chips"]:
         if intensity_factor[x] == -10:
             # correct the double lines (last and 1st line of the modules, at their junction)
@@ -242,9 +244,9 @@ def correct_and_unfold_data(geometry: dict, image: numpy.ndarray, delta: float, 
     line_index1 = geometry["chip_size_y"] - 1
 
     # Last two lines of the first module
-    this_corrected_image[line_index1 : line_index1 + 2, :] =  [this_corrected_image[line_index1, :] / geometry["factor_intensity_double_pixel"]] * 2
+    this_corrected_image[line_index1: line_index1 + 2, :] = [this_corrected_image[line_index1, :] / geometry["factor_intensity_double_pixel"]] * 2
     # Two first lines of the second module
-    this_corrected_image[line_index1 + 3 : line_index1 + 5, :] =  [this_corrected_image[line_index1 + 4, :] / geometry["factor_intensity_double_pixel"]] * 2
+    this_corrected_image[line_index1 + 3: line_index1 + 5, :] = [this_corrected_image[line_index1 + 4, :] / geometry["factor_intensity_double_pixel"]] * 2
     # Line between the two modules (0.5 + 0.5 pixels)
     this_corrected_image[line_index1 + 2, :] = (this_corrected_image[line_index1, :] + this_corrected_image[line_index1 + 4, :]) / 2.0
 
@@ -285,7 +287,7 @@ def extract_diffraction_diagram(two_th_array, psi_array, intensity_array, step_t
     this_bin_array = numpy.floor((two_th_array * mask_psi - two_th_min) / step_two_th)
     this_bin_array = this_bin_array.astype('int')
 
-    intensity_result = numpy.zeros(nb_of_bins + 1) # this will be the summed intensity
+    intensity_result = numpy.zeros(nb_of_bins + 1)  # this will be the summed intensity
     intensity_array = intensity_array * mask_psi
 
     indexes_ = numpy.nonzero(intensity_array > 0)[0]

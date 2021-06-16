@@ -1,6 +1,6 @@
-from src.detectors.xpad.xpadContext import DataContext
-from src.detectors.xpad.xpadProcess import XpadVisualisation
-from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QApplication
+from detectors.xpad.initialDataTab.xpadContext import DataContext
+from detectors.xpad.visualisationTab.xpadProcess import XpadVisualisation
+from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QApplication, QMessageBox
 from PyQt5.QtCore import pyqtSlot
 
 
@@ -32,9 +32,9 @@ class Xpad(QWidget):
         self.tab2.layout.addWidget(self.xpad_visualisation)
 
         self.data_context.experimental_data_tab.scanLabelChanged.connect(self.xpad_visualisation.set_data)
-        self.data_context.experimental_data_tab.contextualDataEntered.connect(self.xpad_visualisation.start_unfolding_raw_data)
-        self.data_context.flatfield_tab.usingFlat.connect(self.send_flatfield_image)
-        self.data_context.flatfield_tab.notUsingFlat.connect(self.send_empty_flatfield)
+        self.data_context.flatfield_tab.computedFlat.connect(self.send_flatfield_image)
+
+        self.xpad_visualisation.unfoldButtonClicked.connect(self.get_contextual_data)
 
         # Add tabs to widget
         self.layout.addWidget(self.tabs)
@@ -45,10 +45,11 @@ class Xpad(QWidget):
         for currentQTableWidgetItem in self.tableWidget.selectedItems():
             print(currentQTableWidgetItem.row(), currentQTableWidgetItem.column(), currentQTableWidgetItem.text())
 
-    def send_flatfield_image(self) -> None:
-        self.xpad_visualisation.get_flatfield(self.data_context.flatfield_tab.send_flatfield())
+    def send_flatfield_image(self, flatfield) -> None:
+        self.xpad_visualisation.get_flatfield(flatfield)
 
-    def send_empty_flatfield(self) -> None:
-        self.xpad_visualisation.get_flatfield(None)
+    def get_contextual_data(self):
+        calib = self.data_context.experimental_data_tab.direct_beam_widget.get_contextual_data()
+        self.xpad_visualisation.set_calibration(calib)
 
 
